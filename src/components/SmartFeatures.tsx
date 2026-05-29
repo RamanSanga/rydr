@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Thermometer, VolumeX, CreditCard, Shield, Clock, Gift, Check, Sparkles, Music } from "lucide-react";
+import { Thermometer, VolumeX, CreditCard, Shield, Clock, Gift, Sparkles, Music } from "lucide-react";
 
 interface FeatureItem {
   icon: any;
@@ -21,40 +21,37 @@ export default function SmartFeatures() {
       name: "Monsoon Cozy",
       temp: 72,
       tempLabel: "Warm & Cozy",
-      quiet: false,
-      quietLabel: "Friendly local greetings",
+      quietLabel: "Friendly driver conversation",
       soundscape: "Soft monsoon rain & lo-fi playlist",
       perk: "Driver meets you doorside with a large umbrella",
-      bgClass: "from-[#F0FDFA] via-white to-[#CCFBF1]/25 border-teal-200",
+      imageSrc: "/images/late_night_ride.png",
       glowClass: "ambient-glow-teal",
-      textColor: "text-[#0F766E]",
-      badgeColor: "bg-teal-100/60 text-[#0F766E] border-teal-200/50",
+      textColor: "text-teal-400",
+      badgeColor: "bg-teal-500/10 text-teal-300 border-teal-500/20",
     },
     sunset: {
       name: "Sunset Chill",
       temp: 68,
       tempLabel: "Crisp AC Breeze",
-      quiet: false,
       quietLabel: "Driver will follow your lead",
       soundscape: "Sunroof open & soft roadway jazz",
       perk: "Pre-cooled cabin with fresh cold water bottles",
-      bgClass: "from-[#FFFBEB] via-white to-[#FDE68A]/20 border-amber-250/60",
+      imageSrc: "/images/sunset_drive.png",
       glowClass: "ambient-glow-amber",
-      textColor: "text-[#B45309]",
-      badgeColor: "bg-amber-100/60 text-[#B45309] border-amber-200/40",
+      textColor: "text-amber-400",
+      badgeColor: "bg-amber-500/10 text-amber-300 border-amber-500/20",
     },
     midnight: {
       name: "Midnight Rest",
       temp: 66,
       tempLabel: "Crisp Chill AC",
-      quiet: true,
       quietLabel: "Absolute silence (driver conversation off)",
       soundscape: "Silent cabin & zero music",
       perk: "Device charging cables pre-plugged & dimmed indicators",
-      bgClass: "from-[#FAF5FF] via-white to-[#E9D5FF]/20 border-purple-250/60",
+      imageSrc: "/images/date_night.png",
       glowClass: "ambient-glow-purple",
-      textColor: "text-[#701A75]",
-      badgeColor: "bg-purple-100/60 text-[#701A75] border-purple-200/50",
+      textColor: "text-purple-400",
+      badgeColor: "bg-purple-500/10 text-purple-300 border-purple-500/20",
     },
   };
 
@@ -96,29 +93,29 @@ export default function SmartFeatures() {
   const currentMood = moodsInfo[selectedMood];
 
   return (
-    <section id="safety" className="bg-white py-32 border-t border-zinc-200 relative overflow-hidden">
+    <section id="safety" className="bg-[#111111] py-32 border-t border-zinc-900 relative overflow-hidden">
       
       {/* Dynamic Ambient Glow Backlight based on selected mood */}
-      <div className={`absolute inset-0 ${currentMood.glowClass} opacity-[0.25] pointer-events-none transition-all duration-500`} />
+      <div className={`absolute inset-0 ${currentMood.glowClass} opacity-[0.03] pointer-events-none transition-all duration-500`} />
 
       <div className="max-w-[1400px] mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
           {/* Left Column: Interactive Cabin Mood Explorer Console */}
           <div className="lg:col-span-6 flex flex-col justify-center order-last lg:order-first">
-            <div className="relative bg-zinc-50 border border-zinc-200 rounded-3xl overflow-hidden shadow-2xs p-6 md:p-8 flex flex-col space-y-6">
+            <div className="relative bg-black/60 border border-zinc-900 rounded-3xl overflow-hidden shadow-2xl p-6 md:p-8 flex flex-col space-y-6">
               
               {/* Header with Segmented Cabin Mode Buttons */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-200/60 pb-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-800/60 pb-5">
                 <div>
-                  <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">
+                  <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-500 uppercase">
                     Cabin Experience
                   </span>
-                  <h3 className="text-base font-extrabold text-zinc-900 tracking-tight">Ambient Cabin Moods</h3>
+                  <h3 className="text-base font-extrabold text-white tracking-tight">Ambient Cabin Moods</h3>
                 </div>
 
                 {/* Mood Segmented control */}
-                <div className="flex space-x-1 bg-zinc-150 p-1 rounded-xl border border-zinc-200">
+                <div className="flex space-x-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 self-start sm:self-auto">
                   {(["monsoon", "sunset", "midnight"] as CabinMood[]).map((m) => (
                     <button
                       key={m}
@@ -126,7 +123,7 @@ export default function SmartFeatures() {
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer ${
                         selectedMood === m 
                           ? "bg-white text-black font-extrabold shadow-3xs"
-                          : "text-zinc-550 hover:text-zinc-800"
+                          : "text-zinc-400 hover:text-zinc-200"
                       }`}
                     >
                       {m}
@@ -135,7 +132,7 @@ export default function SmartFeatures() {
                 </div>
               </div>
 
-              {/* Dynamic Cabin Ambient Preview Card */}
+              {/* Dynamic Cabin Ambient Preview Card (Photographic backdrop) */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={selectedMood}
@@ -143,59 +140,71 @@ export default function SmartFeatures() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.98, y: -5 }}
                   transition={{ duration: 0.25 }}
-                  className={`bg-gradient-to-br ${currentMood.bgClass} border rounded-2xl p-6.5 shadow-3xs space-y-5 flex flex-col`}
+                  className="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-xl min-h-[300px] flex flex-col justify-end p-6"
                 >
-                  
-                  {/* Title & Active indicator */}
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-mono font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded border ${currentMood.badgeColor}`}>
+                  {/* Full-bleed background photo overlay */}
+                  <div className="absolute inset-0 z-0">
+                    <img
+                      src={currentMood.imageSrc}
+                      alt={currentMood.name}
+                      className="w-full h-full object-cover opacity-50"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                  </div>
+
+                  {/* Top indicators */}
+                  <div className="absolute top-5 inset-x-5 flex items-center justify-between z-10">
+                    <span className={`text-[9px] font-mono font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded border ${currentMood.badgeColor}`}>
                       {currentMood.name} Mode Active
                     </span>
-                    <div className="flex items-center space-x-1 text-[9px] font-mono text-zinc-550 font-bold bg-white border border-zinc-200 px-2 py-0.5 rounded shadow-3xs">
+                    <div className="flex items-center space-x-1 text-[9px] font-mono text-zinc-300 font-bold bg-black/60 border border-zinc-800 px-2 py-0.5 rounded shadow-3xs">
                       <Sparkles className={`w-3 h-3 ${currentMood.textColor} animate-pulse`} />
                       <span>COZY CABIN</span>
                     </div>
                   </div>
 
-                  {/* Visual Temperature status */}
-                  <div className="flex justify-between items-center border-b border-zinc-200/50 pb-3">
-                    <div className="flex items-center space-x-2.5">
-                      <Thermometer className={`w-4.5 h-4.5 ${currentMood.textColor}`} />
-                      <span className="text-[13px] font-bold text-zinc-700">Pre-cooled Climate</span>
+                  {/* Status Overlay content */}
+                  <div className="relative z-10 space-y-3.5 mt-20">
+                    {/* Temperature */}
+                    <div className="flex justify-between items-center border-b border-zinc-800/50 pb-2">
+                      <div className="flex items-center space-x-2 text-zinc-350">
+                        <Thermometer className="w-4 h-4 text-amber-500" />
+                        <span className="text-[12.5px] font-bold">Climate Cabin</span>
+                      </div>
+                      <span className="text-[12.5px] font-black text-white font-mono bg-black/40 px-2 py-0.5 rounded border border-zinc-800">
+                        {currentMood.temp}°F • {currentMood.tempLabel}
+                      </span>
                     </div>
-                    <span className="text-[13.5px] font-black text-zinc-900 font-mono bg-white px-2.5 py-0.5 rounded-md border border-zinc-200 shadow-3xs">
-                      {currentMood.temp}°F • {currentMood.tempLabel}
-                    </span>
-                  </div>
 
-                  {/* Visual Conversation status */}
-                  <div className="flex justify-between items-center border-b border-zinc-200/50 pb-3">
-                    <div className="flex items-center space-x-2.5">
-                      <VolumeX className={`w-4.5 h-4.5 ${currentMood.textColor}`} />
-                      <span className="text-[13px] font-bold text-zinc-700">Driver Conversation</span>
+                    {/* Quiet Mode */}
+                    <div className="flex justify-between items-center border-b border-zinc-800/50 pb-2">
+                      <div className="flex items-center space-x-2 text-zinc-350">
+                        <VolumeX className="w-4 h-4" />
+                        <span className="text-[12.5px] font-bold">Driver Status</span>
+                      </div>
+                      <span className="text-[11.5px] font-bold text-white max-w-[180px] text-right truncate">
+                        {currentMood.quietLabel}
+                      </span>
                     </div>
-                    <span className="text-[12px] font-extrabold text-zinc-800">
-                      {currentMood.quietLabel}
-                    </span>
-                  </div>
 
-                  {/* Soundscape status */}
-                  <div className="flex justify-between items-center border-b border-zinc-200/50 pb-3">
-                    <div className="flex items-center space-x-2.5">
-                      <Music className={`w-4.5 h-4.5 ${currentMood.textColor}`} />
-                      <span className="text-[13px] font-bold text-zinc-700">Audio Soundscape</span>
+                    {/* Soundscape */}
+                    <div className="flex justify-between items-center border-b border-zinc-800/50 pb-2">
+                      <div className="flex items-center space-x-2 text-zinc-350">
+                        <Music className="w-4 h-4" />
+                        <span className="text-[12.5px] font-bold">Audio Track</span>
+                      </div>
+                      <span className="text-[11.5px] font-bold text-white max-w-[180px] text-right truncate">
+                        {currentMood.soundscape}
+                      </span>
                     </div>
-                    <span className="text-[12px] font-extrabold text-zinc-800">
-                      {currentMood.soundscape}
-                    </span>
-                  </div>
 
-                  {/* Special Driver Perks */}
-                  <div className="pt-1.5">
-                    <span className="text-[9px] font-mono text-zinc-400 font-bold block uppercase tracking-wider">Doorside driver hospitality</span>
-                    <p className="text-[12.5px] font-bold text-zinc-800 mt-1 leading-normal">
-                      {currentMood.perk}
-                    </p>
+                    {/* Perks */}
+                    <div className="pt-1 select-none">
+                      <span className="text-[8px] font-mono text-zinc-450 font-extrabold uppercase tracking-wider block">Doorside Hospitality</span>
+                      <p className="text-[12px] font-extrabold text-white mt-0.5 leading-normal">
+                        {currentMood.perk}
+                      </p>
+                    </div>
                   </div>
 
                 </motion.div>
@@ -207,13 +216,13 @@ export default function SmartFeatures() {
           {/* Right Column: Title & Feature Grid */}
           <div className="lg:col-span-6 flex flex-col justify-center space-y-8">
             <div className="space-y-3.5">
-              <span className="text-[10px] font-mono tracking-widest text-amber-600 font-bold uppercase">
+              <span className="text-[10px] font-mono tracking-widest text-amber-500 font-bold uppercase">
                 Cozy Cabins
               </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tighter text-zinc-900">
+              <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
                 Your cabin, your rules.
               </h2>
-              <p className="text-zinc-550 text-sm md:text-[14.5px] leading-relaxed font-semibold">
+              <p className="text-zinc-400 text-sm md:text-[14.5px] leading-relaxed font-semibold">
                 We believe rides should be cozy, personal, and stress-free. Settle in, explore ambient cabin moods, let doorside driver hospitality handle the monsoons, and walk out cashless.
               </p>
             </div>
@@ -223,24 +232,24 @@ export default function SmartFeatures() {
               {features.map((feature, idx) => (
                 <div
                   key={idx}
-                  className="bg-zinc-50 border border-zinc-200 p-5 rounded-xl flex flex-col space-y-2 hover:border-zinc-300 transition-colors group shadow-3xs"
+                  className="bg-black/40 border border-zinc-900 p-5 rounded-2xl flex flex-col space-y-2 hover:border-zinc-800 transition-colors group shadow-3xs"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="p-2 bg-white border border-zinc-200 text-zinc-500 group-hover:text-black transition-colors rounded-lg shadow-3xs">
+                    <div className="p-2 bg-zinc-900 border border-zinc-800 text-zinc-550 group-hover:text-white transition-colors rounded-xl shadow-3xs">
                       <feature.icon className="w-4 h-4" />
                     </div>
                     {feature.badge && (
-                      <span className="text-[9px] font-mono font-bold tracking-wider bg-white text-zinc-650 border border-zinc-200 px-2.5 py-0.5 rounded shadow-3xs">
+                      <span className="text-[9px] font-mono font-bold tracking-wider bg-zinc-900 text-zinc-450 border border-zinc-800 px-2.5 py-0.5 rounded shadow-3xs">
                         {feature.badge}
                       </span>
                     )}
                   </div>
                   
                   <div className="space-y-1 mt-1">
-                    <h4 className="text-[13.5px] font-bold text-zinc-900 tracking-tight">
+                    <h4 className="text-[13.5px] font-extrabold text-white tracking-tight">
                       {feature.title}
                     </h4>
-                    <p className="text-[11.5px] text-zinc-500 leading-normal font-semibold">
+                    <p className="text-[11.5px] text-zinc-450 leading-normal font-semibold">
                       {feature.description}
                     </p>
                   </div>

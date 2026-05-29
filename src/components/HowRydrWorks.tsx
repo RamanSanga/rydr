@@ -10,27 +10,24 @@ export default function HowRydrWorks() {
       title: "Tell us where to.",
       description: "Enter your destination and choose the vehicle that fits your plan. You'll see your exact upfront fare locked in immediately.",
       icon: Smartphone,
-      gradient: "from-blue-50/50 to-white",
-      iconColor: "text-blue-600",
-      borderColor: "group-hover:border-blue-200",
+      iconColor: "text-[#B45309]",
+      badgeColor: "bg-amber-100/60 text-[#B45309] border-amber-200/50",
     },
     {
       number: "02",
       title: "Meet your driver.",
       description: "We pair you instantly with a friendly, background-checked local driver. You can track their arrival live on the map.",
       icon: ShieldCheck,
-      gradient: "from-amber-50/50 to-white",
-      iconColor: "text-amber-600",
-      borderColor: "group-hover:border-amber-200",
+      iconColor: "text-[#1D4ED8]",
+      badgeColor: "bg-blue-100/60 text-[#1D4ED8] border-blue-200/50",
     },
     {
       number: "03",
       title: "Enjoy the drive.",
       description: "Sink into a comfortable, air-conditioned cabin and enjoy a peaceful ride. Settle cashless and walk out automatically.",
       icon: Smile,
-      gradient: "from-emerald-50/50 to-white",
-      iconColor: "text-emerald-600",
-      borderColor: "group-hover:border-emerald-200",
+      iconColor: "text-[#15803D]",
+      badgeColor: "bg-green-100/60 text-[#15803D] border-green-200/50",
     },
   ];
 
@@ -61,7 +58,7 @@ export default function HowRydrWorks() {
           <span className="text-[10px] font-mono tracking-widest text-amber-600 font-bold uppercase">
             Simple Rides
           </span>
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tighter text-zinc-900">
+          <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-zinc-900 leading-tight">
             Roadmap of a perfect ride
           </h2>
           <p className="text-zinc-500 text-sm leading-normal font-semibold">
@@ -97,36 +94,36 @@ export default function HowRydrWorks() {
             </svg>
           </div>
 
-          {/* Steps Cards */}
+          {/* Seamless Step Cards (No bordered white containers) */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 lg:gap-12 relative z-10"
+            className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10"
           >
             {steps.map((step, idx) => (
               <motion.div
                 key={idx}
                 variants={stepVariants}
-                className="space-y-6 flex flex-col items-start relative group bg-white border border-zinc-200 p-6.5 rounded-2xl shadow-3xs hover:border-zinc-300 transition-all duration-200 hover:shadow-2xs"
+                className="space-y-5 flex flex-col items-start relative group"
               >
                 {/* Step number and icon wrapper */}
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-3xl font-black text-zinc-200 group-hover:text-zinc-350 transition-colors font-mono tracking-tight leading-none select-none">
+                  <span className="text-5xl font-black text-zinc-300 group-hover:text-zinc-400 transition-colors font-mono tracking-tight leading-none select-none">
                     {step.number}
                   </span>
-                  <div className={`p-3 bg-white border border-zinc-200 rounded-xl ${step.iconColor} shadow-3xs group-hover:scale-105 transition-all duration-200`}>
+                  <div className={`p-3 bg-white border border-zinc-200 rounded-2xl ${step.iconColor} shadow-md transition-transform duration-200 group-hover:scale-105`}>
                     <step.icon className="w-5 h-5" />
                   </div>
                 </div>
 
                 {/* Step description */}
                 <div className="space-y-2">
-                  <h4 className="text-base font-extrabold text-zinc-900 tracking-tight">
+                  <h4 className="text-lg font-black text-zinc-900 tracking-tight">
                     {step.title}
                   </h4>
-                  <p className="text-[13.5px] text-zinc-550 leading-relaxed font-medium">
+                  <p className="text-[13.5px] text-zinc-550 leading-relaxed font-semibold">
                     {step.description}
                   </p>
                 </div>

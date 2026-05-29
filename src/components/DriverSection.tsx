@@ -1,37 +1,34 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { ShieldCheck, Heart, Award, Star, Compass } from "lucide-react";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Navigation, Check, ShieldCheck, Heart, Sparkles, User, Award } from "lucide-react";
 
 type ActiveDriver = "vikram" | "priya";
 
 export default function DriverSection() {
-  const [isOnline, setIsOnline] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<ActiveDriver>("vikram");
 
   const driversList = {
     vikram: {
       name: "Vikram Malhotra",
       rating: "4.99 ★",
-      trips: "1,200+ rides",
-      vehicle: "Tesla Model Y (Zero Emission)",
-      story: "I love taking passengers out of town on spontaneous weekend escapes. I always pre-cool the AC to a crisp breeze and put on my highway roadway jazz playlist!",
-      favoriteSpot: "Lonavala Scenic Highway Outing",
+      trips: "1,200+ trips",
+      vehicle: "Tesla Model Y (EV zero-emission)",
+      story: "I love taking passengers out of town on spontaneous weekend escapes. I always pre-cool the AC to a crisp breeze and put on my road trip roadway jazz playlist!",
+      favoriteSpot: "Sunset Coastal highway escape",
       initials: "VM",
       badge: "EV Cruiser",
-      perk: "Crisp AC Cabin",
     },
     priya: {
       name: "Priya Sharma",
       rating: "4.98 ★",
-      trips: "950+ rides",
-      vehicle: "Honda City (Comfort)",
-      story: "My specialty is rain mode rides! I always carry two large doorside umbrellas to walk you dry and make sure the cabin is warm, cozy, and pre-trip synchronized.",
-      favoriteSpot: "Chai Point Café Spontaneous Stop",
+      trips: "950+ trips",
+      vehicle: "Honda City (Cozy Comfort)",
+      story: "My specialty is rain mode commutes! I always carry two large doorside umbrellas to walk you dry and make sure the cabin is warm, quiet, and pre-trip synchronized.",
+      favoriteSpot: "Late-night Chai Café stop",
       initials: "PS",
       badge: "Monsoon Helper",
-      perk: "Cozy & Dry Cabin",
     },
   };
 
@@ -39,157 +36,93 @@ export default function DriverSection() {
 
   return (
     <section id="drive" className="bg-[#F8F8F8] py-32 border-t border-zinc-200 relative overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-6">
+      
+      {/* Soft background grid */}
+      <div className="absolute inset-0 premium-grid-fine opacity-[0.06] pointer-events-none" />
+
+      <div className="max-w-[1400px] mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
-          {/* Left Column: Interactive Driver Profile App Mockup */}
-          <div className="lg:col-span-6 w-full flex flex-col justify-center">
-            <div className="bg-white border border-zinc-200 rounded-3xl p-5 md:p-6.5 shadow-sm relative overflow-hidden flex flex-col space-y-6">
+          {/* Left Column: Breathtaking Photographic Driver Preview */}
+          <div className="lg:col-span-7 w-full flex flex-col justify-center">
+            <div className="relative rounded-3xl overflow-hidden border border-zinc-200 shadow-2xl aspect-[1.4/1] flex flex-col justify-end group cursor-pointer bg-black">
               
-              {/* Header: Driver App status controls */}
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-150">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-350" />
-                  <span className="text-[10px] font-mono tracking-widest text-zinc-450 font-bold">RYDR DRIVER APP</span>
-                </div>
-
-                {/* Status Toggle Button */}
-                <button
-                  onClick={() => setIsOnline(!isOnline)}
-                  className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer shadow-3xs ${
-                    isOnline 
-                      ? "bg-emerald-50 border-emerald-350 text-emerald-700 font-extrabold"
-                      : "bg-zinc-50 border-zinc-200 text-zinc-550 font-bold"
-                  }`}
-                >
-                  <span className="text-[9.5px] font-mono tracking-wider">
-                    {isOnline ? "ONLINE" : "OFFLINE"}
-                  </span>
-                  <div className="w-3.5 h-3.5 flex items-center justify-center">
-                    {isOnline ? (
-                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping" />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full bg-zinc-400" />
-                    )}
-                  </div>
-                </button>
+              {/* Full-bleed photography backdrop */}
+              <div className="absolute inset-0 z-0">
+                <img
+                  src="/images/daily_commute.png"
+                  alt="Rydr Driver Cruise"
+                  className="w-full h-full object-cover opacity-75 transition-transform duration-700 group-hover:scale-103"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent" />
               </div>
 
-              {/* Segmented control to toggle between drivers */}
-              <div className="flex space-x-2 bg-zinc-50 p-1 rounded-xl border border-zinc-200">
-                {(["vikram", "priya"] as ActiveDriver[]).map((driverId) => (
+              {/* Driver selector badges inside the photo */}
+              <div className="absolute top-5 left-5 z-10 flex space-x-2 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-zinc-800 shadow-md">
+                {(["vikram", "priya"] as ActiveDriver[]).map((dId) => (
                   <button
-                    key={driverId}
-                    onClick={() => setSelectedDriver(driverId)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedDriver === driverId
+                    key={dId}
+                    onClick={() => setSelectedDriver(dId)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-wider font-extrabold transition-colors cursor-pointer ${
+                      selectedDriver === dId 
                         ? "bg-white text-black shadow-3xs"
-                        : "text-zinc-500 hover:text-zinc-800"
+                        : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
-                    {driverId === "vikram" ? "Vikram Malhotra" : "Priya Sharma"}
+                    {dId === "vikram" ? "Vikram Malhotra" : "Priya Sharma"}
                   </button>
                 ))}
               </div>
 
-              {/* Dynamic Driver Information Polaroid Profile */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={selectedDriver}
-                  initial={{ opacity: 0, scale: 0.98, y: 5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98, y: -5 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-zinc-50 border border-zinc-200 rounded-2xl p-5.5 space-y-4 shadow-3xs relative overflow-hidden"
-                >
-                  {/* Top Details */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3.5">
-                      <div className="w-11 h-11 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-3xs text-zinc-800 font-black text-sm">
-                        {activeDriverInfo.initials}
-                      </div>
-                      <div>
-                        <h4 className="text-[13px] font-black text-zinc-900 leading-tight">{activeDriverInfo.name}</h4>
-                        <p className="text-[10px] text-zinc-450 mt-0.5 leading-none font-semibold">{activeDriverInfo.vehicle}</p>
-                      </div>
+              {/* Driver Story Profile Overlay */}
+              <div className="p-6 md:p-8 relative z-10 space-y-4 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-amber-500 font-black text-sm shadow-md">
+                      {activeDriverInfo.initials}
                     </div>
-                    <span className="text-[9.5px] font-mono font-extrabold bg-white border border-zinc-200 px-2 py-0.5 rounded shadow-3xs text-zinc-700">
-                      {activeDriverInfo.badge}
-                    </span>
-                  </div>
-
-                  <div className="h-[1px] bg-zinc-200/60" />
-
-                  {/* Storytelling bio */}
-                  <div className="space-y-1">
-                    <span className="text-[8.5px] font-mono text-zinc-400 font-extrabold uppercase tracking-wider block">Why I love driving</span>
-                    <p className="text-[12.5px] text-zinc-700 font-semibold leading-relaxed italic">
-                      "{activeDriverInfo.story}"
-                    </p>
-                  </div>
-
-                  {/* Driver metrics */}
-                  <div className="grid grid-cols-3 gap-3 pt-2">
-                    <div className="bg-white border border-zinc-200 rounded-xl p-3.5 text-center shadow-3xs">
-                      <span className="text-[14px] font-black text-zinc-900 block leading-none">{activeDriverInfo.rating}</span>
-                      <span className="text-[8px] font-mono text-zinc-400 block mt-1 uppercase font-bold">Feedback</span>
-                    </div>
-                    <div className="bg-white border border-zinc-200 rounded-xl p-3.5 text-center shadow-3xs">
-                      <span className="text-[12px] font-black text-zinc-900 block leading-none">{activeDriverInfo.trips}</span>
-                      <span className="text-[8px] font-mono text-zinc-400 block mt-1.5 uppercase font-bold">Trips Completed</span>
-                    </div>
-                    <div className="bg-white border border-zinc-200 rounded-xl p-3.5 text-center shadow-3xs flex flex-col items-center justify-center">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
-                      <span className="text-[8px] font-mono text-zinc-400 block mt-1 uppercase font-bold">Vetted Shield</span>
+                    <div>
+                      <h4 className="text-[14px] font-black text-white leading-tight">{activeDriverInfo.name}</h4>
+                      <p className="text-[10px] text-zinc-400 mt-0.5 leading-none font-semibold">{activeDriverInfo.vehicle}</p>
                     </div>
                   </div>
+                  <span className="text-[9px] font-mono font-extrabold bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-0.5 rounded-full backdrop-blur-md">
+                    {activeDriverInfo.badge}
+                  </span>
+                </div>
 
-                </motion.div>
-              </AnimatePresence>
+                <div className="h-[1px] bg-zinc-800/80 my-2" />
 
-              {/* Pulsing Request Matching Overlay when Online */}
-              <AnimatePresence>
-                {isOnline ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                    className="absolute inset-x-5 bottom-5 bg-white border border-zinc-250 shadow-md p-4 rounded-xl flex items-center justify-between z-10"
-                  >
-                    <div className="flex items-center space-x-3.5">
-                      <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600 animate-pulse">
-                        <Navigation className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-[9px] font-mono font-black tracking-wider text-emerald-750 uppercase">MATCHING REQUEST FOUND</span>
-                        </div>
-                        <div className="text-[13.5px] font-black text-zinc-900 tracking-tight mt-0.5">
-                          Chai Run • 1.2 mi • 3m away
-                        </div>
-                      </div>
-                    </div>
-                    <button className="px-3.5 py-1.5 bg-black text-white hover:bg-zinc-800 active:scale-95 transition-all text-xs font-bold rounded-lg cursor-pointer flex items-center space-x-1 shadow-sm">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Accept</span>
-                    </button>
-                  </motion.div>
-                ) : (
-                  <div className="text-center py-2 text-[10.5px] font-extrabold text-zinc-400 select-none">
-                    Tap OFFLINE to simulate matching Vikram/Priya with your next ride!
-                  </div>
-                )}
-              </AnimatePresence>
+                <div className="space-y-1">
+                  <span className="text-[8.5px] font-mono text-zinc-400 font-extrabold block uppercase tracking-widest">Stories from the Road</span>
+                  <p className="text-[12.5px] text-zinc-300 leading-relaxed font-semibold italic">
+                    "{activeDriverInfo.story}"
+                  </p>
+                </div>
+
+                {/* Ratings */}
+                <div className="flex items-center space-x-6 pt-1 text-xs">
+                  <span className="font-extrabold text-zinc-200 flex items-center gap-1.5">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500 stroke-0" />
+                    <span>{activeDriverInfo.rating} Rating</span>
+                  </span>
+                  <span className="font-extrabold text-zinc-200 flex items-center gap-1.5">
+                    <Compass className="w-4 h-4 text-blue-400" />
+                    <span>{activeDriverInfo.trips} completed</span>
+                  </span>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          {/* Right Column: Driver details */}
-          <div className="lg:col-span-6 flex flex-col justify-center space-y-8">
+          {/* Right Column: Driver onboarding information */}
+          <div className="lg:col-span-5 flex flex-col justify-center space-y-8">
             <div className="space-y-3.5">
               <span className="text-[10px] font-mono tracking-widest text-amber-600 font-bold uppercase">
                 DRIVE WITH RYDR
               </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tighter text-zinc-900">
+              <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-zinc-900 leading-tight">
                 Drive when you want, meet the neighborhood
               </h2>
               <p className="text-zinc-500 text-sm md:text-[14.5px] leading-relaxed font-semibold">
@@ -197,7 +130,7 @@ export default function DriverSection() {
               </p>
             </div>
 
-            {/* Steps & Driver Commitments */}
+            {/* Commitments list */}
             <div className="space-y-6">
               {[
                 {
@@ -217,7 +150,7 @@ export default function DriverSection() {
                 },
               ].map((bullet, idx) => (
                 <div key={idx} className="flex space-x-4">
-                  <div className="text-zinc-500 bg-white border border-zinc-200 rounded-lg w-9 h-9 flex items-center justify-center shrink-0 shadow-2xs">
+                  <div className="text-zinc-500 bg-white border border-zinc-200 rounded-xl w-9 h-9 flex items-center justify-center shrink-0 shadow-2xs">
                     <bullet.icon className="w-4.5 h-4.5" />
                   </div>
                   <div className="space-y-0.5 mt-0.5">
