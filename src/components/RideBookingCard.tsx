@@ -419,12 +419,12 @@ export default function RideBookingCard({
     let meta: any = null;
     try {
       const response = await getNearbyDrivers(start[1], start[0]);
-      nearbyDrivers = response.drivers;
+      nearbyDrivers = response.drivers || [];
       meta = response;
       setDebugSearchMeta(response);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setDebugNoDriverReason("API Error or Server Exception");
+      setDebugNoDriverReason(`CLIENT CATCH BLOCK ERROR: ${err.message || "Unknown error"}`);
     }
 
     const waitTime = nearbyDrivers.length > 0 ? 4500 : 15000;
@@ -437,7 +437,8 @@ export default function RideBookingCard({
       } else {
         setBookingState("noDriverFound");
         if (meta) {
-          if (meta.totalOnline === 0) setDebugNoDriverReason("No online drivers exist in database.");
+          if (meta.error) setDebugNoDriverReason(`SERVER EXCEPTION: ${meta.error}`);
+          else if (meta.totalOnline === 0) setDebugNoDriverReason("No online drivers exist in database.");
           else if (meta.totalOnline > 0 && meta.totalWithinRadius === 0) setDebugNoDriverReason(`Drivers exist (${meta.totalOnline}), but none within ${meta.radius}km radius.`);
           else setDebugNoDriverReason("Unknown matching issue.");
         }

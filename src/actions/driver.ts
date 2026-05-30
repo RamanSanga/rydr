@@ -318,60 +318,80 @@ export async function updateDriverLocation(latitude: number, longitude: number, 
 
 // 8. Get Nearby Online Drivers for Rider App
 export async function getNearbyDrivers(lat: number, lng: number) {
-  if (!lat || !lng) {
-    return { drivers: [], totalOnline: 0, totalWithinRadius: 0, radius: 10, error: "Invalid coordinates" };
-  }
-
-  // Fetch all online drivers (in a real app, use PostGIS, but for this demo, fetch all and calculate in memory)
-  const onlineDrivers = await prisma.driverLocation.findMany({
-    where: {
-      isOnline: true,
-      // Removed NOT: { userId } constraint so solo developers can test Rider+Driver on same account
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  const R = 6371; // Radius of the earth in km
   const RADIUS_LIMIT_KM = 10;
   
-  console.log("================================================");
-  console.log(`[RIDER SEARCH] Coordinates: Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`);
-  console.log(`[RIDER SEARCH] Found ${onlineDrivers.length} total online drivers globally.`);
-  
-  const driversWithDistance = onlineDrivers.map(driver => {
-    const dLat = (driver.latitude - lat) * (Math.PI / 180);
-    const dLon = (driver.longitude - lng) * (Math.PI / 180);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat * (Math.PI / 180)) * Math.cos(driver.latitude * (Math.PI / 180)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const distanceKm = R * c;
+  try {
+    console.log("[getNearbyDrivers] Function start");
+
+    if (!lat || !lng) {
+      console.log("[getNearbyDrivers] Invalid coordinates");
+      return { drivers: [], totalOnline: 0, totalWithinRadius: 0, radius: RADIUS_LIMIT_KM, error: "Invalid coordinates" };
+    }
+
+    // Fetch all online drivers (in a real app, use PostGIS, but for this demo, fetch all and calculate in memory)
+    console.log("[getNearbyDrivers] Querying database for online drivers...");
+    const onlineDrivers = await prisma.driverLocation.findMany({
+      where: {
+        isOnline: true,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    console.log(`[getNearbyDrivers] Prisma query result: found ${onlineDrivers.length} online drivers`);
+
+    const R = 6371; // Radius of the earth in km
     
-    console.log(`[DRIVER CHECK] Driver ${driver.user?.name || driver.userId} at Lat ${driver.latitude.toFixed(5)}, Lng ${driver.longitude.toFixed(5)} -> Distance: ${distanceKm.toFixed(2)} km`);
+    console.log("================================================");
+    console.log(`[RIDER SEARCH] Coordinates: Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`);
+    console.log(`[RIDER SEARCH] Found ${onlineDrivers.length} total online drivers globally.`);
+    
+    console.log("[getNearbyDrivers] Starting distance calculations...");
+    const driversWithDistance = onlineDrivers.map(driver => {
+      const dLat = (driver.latitude - lat) * (Math.PI / 180);
+      const dLon = (driver.longitude - lng) * (Math.PI / 180);
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat * (Math.PI / 180)) * Math.cos(driver.latitude * (Math.PI / 180)) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2); 
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+      const distanceKm = R * c;
+      
+      console.log(`[DRIVER CHECK] Driver ${driver.user?.name || driver.userId} at Lat ${driver.latitude.toFixed(5)}, Lng ${driver.longitude.toFixed(5)} -> Distance: ${distanceKm.toFixed(2)} km`);
 
+      return {
+        ...driver,
+        distanceKm,
+      };
+    });
+
+    console.log("[getNearbyDrivers] Starting radius filtering...");
+    // Filter by realistic radius limit (10 km)
+    const driversWithinRadius = driversWithDistance.filter(driver => driver.distanceKm <= RADIUS_LIMIT_KM);
+    
+    console.log(`[RIDER SEARCH] Drivers within ${RADIUS_LIMIT_KM}km radius limit: ${driversWithinRadius.length}`);
+    console.log("================================================");
+
+    // Sort by closest and limit to top 5
+    const sortedDrivers = driversWithinRadius.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
+
+    console.log("[getNearbyDrivers] Return payload ready");
     return {
-      ...driver,
-      distanceKm,
+      drivers: sortedDrivers,
+      totalOnline: onlineDrivers.length,
+      totalWithinRadius: driversWithinRadius.length,
+      radius: RADIUS_LIMIT_KM,
+      error: null
     };
-  });
-
-  // Filter by realistic radius limit (10 km)
-  const driversWithinRadius = driversWithDistance.filter(driver => driver.distanceKm <= RADIUS_LIMIT_KM);
-  
-  console.log(`[RIDER SEARCH] Drivers within ${RADIUS_LIMIT_KM}km radius limit: ${driversWithinRadius.length}`);
-  console.log("================================================");
-
-  // Sort by closest and limit to top 5
-  const sortedDrivers = driversWithinRadius.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
-
-  return {
-    drivers: sortedDrivers,
-    totalOnline: onlineDrivers.length,
-    totalWithinRadius: driversWithinRadius.length,
-    radius: RADIUS_LIMIT_KM,
-    error: null
-  };
+  } catch (error: any) {
+    console.error("[getNearbyDrivers] EXCEPTION CAUGHT:", error);
+    return {
+      drivers: [],
+      totalOnline: 0,
+      totalWithinRadius: 0,
+      radius: RADIUS_LIMIT_KM,
+      error: error.message || "Unknown server error occurred"
+    };
+  }
 }
