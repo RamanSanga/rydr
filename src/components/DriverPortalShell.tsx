@@ -22,8 +22,10 @@ import {
   fetchDriverCompletedRides,
   fetchDriverStats,
   acceptRideAction,
+  rejectRideAction,
   completeRideAction,
   updateDriverLocation,
+  updateRideStatusAction,
 } from "@/actions/driver";
 import { getRouteDistance, calculateFare } from "@/lib/data";
 
@@ -32,8 +34,9 @@ type IconType = ComponentType<{ className?: string }>;
 
 const statusStyles: Record<string, string> = {
   "New Request": "bg-amber-50 text-amber-700 border-amber-250/65",
-  Assigned: "bg-blue-50 text-blue-700 border-blue-250/65",
-  "In Progress": "bg-emerald-50 text-emerald-700 border-emerald-250/65",
+  Accepted: "bg-blue-50 text-blue-700 border-blue-250/65",
+  "Driver Arriving": "bg-blue-50 text-blue-700 border-blue-250/65",
+  "On Trip": "bg-emerald-50 text-emerald-700 border-emerald-250/65",
   Completed: "bg-zinc-100 text-zinc-700 border-zinc-200",
   Cancelled: "bg-red-50 text-red-700 border-red-250/65",
 };
@@ -108,6 +111,7 @@ function RideTile({
   status,
   onAccept,
   onDecline,
+  onUpdateStatus,
   onComplete,
 }: {
   rider: string;
@@ -115,9 +119,10 @@ function RideTile({
   meta: string;
   amount: string;
   tier: "Daily" | "EV Eco" | "Luxe";
-  status?: DriverRideStatus;
+  status?: DriverRideStatus | string;
   onAccept?: () => void;
   onDecline?: () => void;
+  onUpdateStatus?: (status: string) => void;
   onComplete?: () => void;
 }) {
   return (
@@ -168,16 +173,34 @@ function RideTile({
         </div>
       )}
 
-      {/* Complete active trip trigger */}
-      {onComplete && (
+      {/* Active Trip Progress buttons */}
+      {(onUpdateStatus || onComplete) && (
         <div className="mt-4 pt-3 border-t border-zinc-100">
-          <button
-            onClick={onComplete}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs active:scale-97 flex items-center justify-center space-x-1.5"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Complete Trip</span>
-          </button>
+          {status === "Accepted" && onUpdateStatus && (
+            <button
+              onClick={() => onUpdateStatus("Driver Arriving")}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs active:scale-97"
+            >
+              Mark Arrived
+            </button>
+          )}
+          {status === "Driver Arriving" && onUpdateStatus && (
+            <button
+              onClick={() => onUpdateStatus("On Trip")}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs active:scale-97"
+            >
+              Start Trip
+            </button>
+          )}
+          {status === "On Trip" && onComplete && (
+            <button
+              onClick={onComplete}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-3xs active:scale-97 flex items-center justify-center space-x-1.5"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Complete Trip</span>
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -218,7 +241,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
           pickup: r.pickup.split(",")[0],
           destination: r.destination.split(",")[0],
           distance: `${dist} km`,
-          fare: `₹${fare}`,
+          fare: r.fare ? `₹${r.fare}` : `₹${fare}`,
           tier: r.rideType === "economy" ? "EV Eco" : r.rideType === "premium" ? "Daily" : "Luxe",
           status: "New Request" as const,
         };
@@ -231,10 +254,11 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
           id: r.id,
           rider: r.user?.name || "Passenger",
           route: `${r.pickup.split(",")[0]} ➔ ${r.destination.split(",")[0]}`,
-          fare: `₹${fare}`,
-          eta: r.status === "Driver Assigned" ? "Arriving at Pickup" : "In Transit to Destination",
+          fare: r.fare ? `₹${r.fare}` : `₹${fare}`,
+          eta: r.status === "Accepted" ? "Arriving at Pickup" : r.status === "Driver Arriving" ? "Arrived" : "In Transit to Destination",
           time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
           tier: r.rideType === "economy" ? "EV Eco" : r.rideType === "premium" ? "Daily" : "Luxe",
+          status: r.status,
         };
       });
 
@@ -245,7 +269,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
           id: r.id,
           rider: r.user?.name || "Passenger",
           route: `${r.pickup.split(",")[0]} ➔ ${r.destination.split(",")[0]}`,
-          payout: `₹${fare}`,
+          payout: r.fare ? `₹${r.fare}` : `₹${fare}`,
           rating: "5.0",
           time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
           tier: r.rideType === "economy" ? "EV Eco" : r.rideType === "premium" ? "Daily" : "Luxe",
@@ -292,7 +316,19 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
               console.error("Failed to update driver location:", err);
             }
           },
-          (err) => console.error("Geolocation error:", err),
+          async (err) => {
+            console.warn("Geolocation error, using fallback location:", err);
+            try {
+              // Fallback to Connaught Place, New Delhi for testing
+              await updateDriverLocation(
+                28.6304,
+                77.2177,
+                availability === "Online"
+              );
+            } catch (fallbackErr) {
+              console.error("Failed to update driver fallback location:", fallbackErr);
+            }
+          },
           { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
         );
       }
@@ -324,8 +360,16 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     }
   };
 
-  const handleDeclineRequest = (id: string) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
+  const handleDeclineRequest = async (id: string) => {
+    try {
+      setLoading(true);
+      await rejectRideAction(id);
+      await loadDashboardData();
+    } catch (err) {
+      console.error("Failed to reject ride:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCompleteRide = async (id: string) => {
@@ -335,6 +379,18 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
       await loadDashboardData();
     } catch (err) {
       console.error("Failed to complete ride:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateRideStatus = async (id: string, newStatus: string) => {
+    try {
+      setLoading(true);
+      await updateRideStatusAction(id, newStatus);
+      await loadDashboardData();
+    } catch (err) {
+      console.error("Failed to update ride status:", err);
     } finally {
       setLoading(false);
     }
@@ -552,6 +608,8 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                         meta={ride.eta}
                         amount={ride.fare}
                         tier={ride.tier}
+                        status={ride.status}
+                        onUpdateStatus={(newStatus) => handleUpdateRideStatus(ride.id, newStatus)}
                         onComplete={() => handleCompleteRide(ride.id)}
                       />
                     ))

@@ -12,7 +12,8 @@ model User {
   name           String
   email          String          @unique
   role           String          // "rider" | "driver" | "business"
-  rides          Ride[]
+  rides          Ride[]          @relation("RiderRides")
+  driverRides    Ride[]          @relation("DriverRides")
   savedLocations SavedLocation[]
   driverLocation DriverLocation?
 }
@@ -22,10 +23,12 @@ model Ride {
   pickup      String
   destination String
   rideType    String
-  status      String   // "Completed" | "Scheduled" | "Cancelled"
+  fare        Float?
+  status      String   // "Requested" | "Accepted" | "Driver Arriving" | "On Trip" | "Completed" | "Cancelled"
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation("RiderRides", fields: [userId], references: [id])
   driverId    String?
+  driver      User?    @relation("DriverRides", fields: [driverId], references: [id])
   createdAt   DateTime @default(now())
 }
 

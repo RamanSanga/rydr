@@ -434,7 +434,8 @@ export default function RideBookingCard({
     
     // Save the ride in PostgreSQL database via Server Action!
     setBookingState("confirmed");
-    createRideAction(pValue, dValue, selectedRide, pCoords[1], pCoords[0])
+    const fare = parseFloat(getFare(selectedRide).replace(/,/g, ""));
+    createRideAction(pValue, dValue, selectedRide, pCoords[1], pCoords[0], fare)
       .then(() => {
         setTimeout(() => {
           router.push("/rides");

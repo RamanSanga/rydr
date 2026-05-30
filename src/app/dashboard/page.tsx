@@ -17,8 +17,6 @@ export default async function DashboardRedirectPage() {
     redirect("/rider");
   } else if (role === "driver") {
     redirect("/driver");
-  } else if (role === "business") {
-    redirect("/business");
   } else {
     // If no role is selected, direct them to select a role onboarding screen
     redirect("/select-role");

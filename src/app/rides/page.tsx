@@ -7,7 +7,7 @@ import { fetchUserRides } from "@/actions/ride";
 import { Search, MapPin, Calendar, Clock, Star, ChevronRight, HelpCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
-type RideFilter = "All" | "Requested" | "Driver Assigned" | "On The Way" | "Completed" | "Cancelled";
+type RideFilter = "All" | "Requested" | "Accepted" | "On Trip" | "Completed" | "Cancelled";
 
 export default function RidesHistoryPage() {
   const [activeFilter, setActiveFilter] = useState<RideFilter>("All");
@@ -21,16 +21,16 @@ export default function RidesHistoryPage() {
         const dbRides = await fetchUserRides();
         
         // Map raw DB logs to the high-fidelity UI format
-        const formattedRides: Ride[] = dbRides.map((r) => ({
+        const formattedRides: Ride[] = dbRides.map((r: any) => ({
           id: r.id,
           date: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
           pickup: r.pickup,
           destination: r.destination,
-          price: "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
-          driverName: "Vikram Malhotra",
-          driverInitials: "VM",
-          vehicle: "Tesla Model Y (White)",
+          price: r.fare ? "₹" + r.fare : "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
+          driverName: r.driver?.name || "Unassigned",
+          driverInitials: r.driver?.name ? r.driver.name.substring(0, 2).toUpperCase() : "??",
+          vehicle: "Swift Dzire (White)", // We can make this dynamic if we add vehicle to DB later
           status: r.status as any,
           tier: r.rideType === "economy" ? "Economy" : r.rideType === "premium" ? "Premium" : "XL",
         }));
@@ -42,7 +42,13 @@ export default function RidesHistoryPage() {
         setLoading(false);
       }
     }
+    
+    // Initial load
     loadRides();
+
+    // Poll every 10 seconds for real-time status updates
+    const interval = setInterval(loadRides, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredRides = localRides.filter((ride) => {
@@ -54,15 +60,16 @@ export default function RidesHistoryPage() {
     return matchesFilter && matchesSearch;
   });
 
-  const filterTabs: RideFilter[] = ["All", "Requested", "Driver Assigned", "On The Way", "Completed"];
+  const filterTabs: RideFilter[] = ["All", "Requested", "Accepted", "On Trip", "Completed"];
 
   const statusColors = {
     Requested: "bg-amber-50 text-amber-700 border-amber-200/60",
-    "Driver Assigned": "bg-blue-50 text-blue-700 border-blue-200/60",
-    "On The Way": "bg-indigo-50 text-indigo-700 border-indigo-200/60",
-    Completed: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+    Accepted: "bg-blue-50 text-blue-700 border-blue-200/60",
+    "Driver Arriving": "bg-indigo-50 text-indigo-700 border-indigo-200/60",
+    "On Trip": "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+    Completed: "bg-zinc-100 text-zinc-700 border-zinc-200/60",
     Cancelled: "bg-red-50 text-red-700 border-red-200/60",
-  };
+  } as Record<string, string>;
 
   return (
     <main className="relative min-h-screen bg-[#F8F8F8] text-[#111111] antialiased pb-24 md:pb-12 pt-28">

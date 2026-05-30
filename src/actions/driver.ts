@@ -81,7 +81,7 @@ export async function fetchAvailableRideRequests() {
   return prisma.ride.findMany({
     where: {
       status: "Requested",
-      driverId: null,
+      driverId: userId,
     },
     orderBy: { createdAt: "desc" },
     include: {
@@ -103,7 +103,7 @@ export async function fetchDriverActiveRides() {
     where: {
       driverId: userId,
       status: {
-        in: ["Driver Assigned", "On The Way"],
+        in: ["Accepted", "Driver Arriving", "On Trip"],
       },
     },
     orderBy: { createdAt: "desc" },
@@ -158,12 +158,35 @@ export async function acceptRideAction(rideId: string) {
     create: { id: userId, name, email, role },
   });
 
-  // Update Ride status to "Driver Assigned" and assign driverId
+  // Update Ride status to "Accepted"
   const ride = await prisma.ride.update({
     where: { id: rideId },
     data: {
-      status: "Driver Assigned",
-      driverId: userId,
+      status: "Accepted",
+    },
+  });
+
+  revalidatePath("/driver");
+  revalidatePath("/driver/rides");
+  revalidatePath("/rider");
+  revalidatePath("/rides");
+
+  return { success: true, ride };
+}
+
+// 4.5 Decline a ride request
+export async function rejectRideAction(rideId: string) {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("Unauthorized: Please sign in first.");
+  }
+
+  // Update Ride status to "Cancelled"
+  const ride = await prisma.ride.update({
+    where: { id: rideId },
+    data: {
+      status: "Cancelled",
+      driverId: null, // Free it up in case we want to re-route later, but for now it's cancelled
     },
   });
 
@@ -199,6 +222,24 @@ export async function completeRideAction(rideId: string) {
   return { success: true, ride };
 }
 
+// 5.5 Update intermediate ride status
+export async function updateRideStatusAction(rideId: string, newStatus: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const ride = await prisma.ride.update({
+    where: { id: rideId },
+    data: { status: newStatus },
+  });
+
+  revalidatePath("/driver");
+  revalidatePath("/driver/rides");
+  revalidatePath("/rider");
+  revalidatePath("/rides");
+
+  return { success: true, ride };
+}
+
 // 6. Fetch driver statistics from actual PostgreSQL DB records (in Indian Rupees ₹)
 export async function fetchDriverStats() {
   const { userId } = await auth();
@@ -222,15 +263,13 @@ export async function fetchDriverStats() {
   const activeRequestsCount = await prisma.ride.count({
     where: {
       status: "Requested",
-      driverId: null,
+      driverId: userId,
     },
   });
 
   // Calculate earnings dynamically in Indian Rupees (₹)
   const earningsSum = completed.reduce((sum, r) => {
-    const dist = getRouteDistance(r.pickup, r.destination);
-    const fare = parseFloat(calculateFare(dist, r.rideType));
-    return sum + (isNaN(fare) ? 0 : fare);
+    return sum + (r.fare ? r.fare : 0);
   }, 0);
 
   return {

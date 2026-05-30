@@ -3,7 +3,7 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
-export async function selectUserRole(role: "rider" | "driver" | "business") {
+export async function selectUserRole(role: "rider" | "driver") {
   const { userId } = await auth();
   if (!userId) {
     throw new Error("Unauthorized: Please sign in to Rydr first.");

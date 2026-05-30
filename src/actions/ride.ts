@@ -94,7 +94,7 @@ export async function seedUserRides(userId: string) {
   });
 }
 
-export async function createRideAction(pickup: string, destination: string, rideType: string, pickupLat?: number, pickupLng?: number) {
+export async function createRideAction(pickup: string, destination: string, rideType: string, pickupLat: number, pickupLng: number, fare: number) {
   const { userId } = await auth();
   if (!userId) {
     throw new Error("Unauthorized: Please sign in first.");
@@ -122,7 +122,6 @@ export async function createRideAction(pickup: string, destination: string, ride
     if (nearbyDrivers.length > 0) {
       // Assign the closest one
       assignedDriverId = nearbyDrivers[0].userId;
-      status = "Driver Assigned";
     }
   }
 
@@ -132,6 +131,7 @@ export async function createRideAction(pickup: string, destination: string, ride
       pickup,
       destination,
       rideType,
+      fare,
       status,
       userId,
       driverId: assignedDriverId,
@@ -140,6 +140,23 @@ export async function createRideAction(pickup: string, destination: string, ride
 
   revalidatePath("/rider");
   revalidatePath("/rides");
+  revalidatePath("/driver");
+
+  return { success: true, ride };
+}
+
+export async function updateRideStatus(rideId: string, newStatus: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const ride = await prisma.ride.update({
+    where: { id: rideId },
+    data: { status: newStatus },
+  });
+
+  revalidatePath("/rider");
+  revalidatePath("/rides");
+  revalidatePath("/driver");
 
   return { success: true, ride };
 }
@@ -153,6 +170,18 @@ export async function fetchUserRides() {
 
   return prisma.ride.findMany({
     where: { userId },
+    include: { driver: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function fetchDriverRides() {
+  const { userId } = await auth();
+  if (!userId) return [];
+
+  return prisma.ride.findMany({
+    where: { driverId: userId },
+    include: { user: true },
     orderBy: { createdAt: "desc" },
   });
 }

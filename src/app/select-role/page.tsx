@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Car, Key, Building2, Loader2, ArrowRight, Check } from "lucide-react";
 import { selectUserRole } from "@/actions/role";
 
-type RydrRole = "rider" | "driver" | "business";
+type RydrRole = "rider" | "driver";
 
 interface RoleOption {
   id: RydrRole;
@@ -42,15 +42,6 @@ export default function RoleSelectionPage() {
       icon: Key,
       color: "hover:border-amber-500 hover:shadow-amber-50/50",
       badge: "Driver Console",
-    },
-    {
-      id: "business",
-      eyebrow: "ENTERPRISE PORTAL",
-      title: "Business Account",
-      description: "Manage employee travel limits, invite personnel, top up corporate wallets, and review department spend statements.",
-      icon: Building2,
-      color: "hover:border-emerald-500 hover:shadow-emerald-50/50",
-      badge: "Enterprise Console",
     },
   ];
 
