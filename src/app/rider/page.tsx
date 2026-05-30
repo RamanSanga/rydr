@@ -1,20 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
 import RideBookingCard from "@/components/RideBookingCard";
 import { Ride, getRouteDistance, calculateFare } from "@/lib/data";
 import { fetchUserRides } from "@/actions/ride";
 import { getNearbyDrivers } from "@/actions/driver";
 import { fetchSavedLocations, createSavedLocation } from "@/actions/savedLocation";
-import { Home, Briefcase, Plane, Activity, MapPin, Clock, ArrowRight } from "lucide-react";
+import { getOnboardingState } from "@/actions/onboarding";
+import { Home, Briefcase, Plane, Activity, MapPin, Clock, Navigation2 } from "lucide-react";
 import Link from "next/link";
 import MapboxMap from "@/components/MapboxMap";
 import { motion } from "framer-motion";
 
+const greetings = [
+  "👋 Ready to roll?",
+  "🚖 Where are we sneaking off to today?",
+  "☕ Coffee run?",
+  "✈️ Airport escape?",
+  "🌃 City lights tonight?",
+  "😏 Trying to avoid traffic again?"
+];
+
 export default function RiderDashboard() {
-  const { user } = useUser();
-  const [greeting, setGreeting] = useState("Hello 👋");
+  const router = useRouter();
+  const [greeting, setGreeting] = useState(greetings[0]);
   const [localRides, setLocalRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,20 +40,11 @@ export default function RiderDashboard() {
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
 
-  // Time-based greeting
   useEffect(() => {
-    const hour = new Date().getHours();
-    const name = user?.firstName ? `, ${user.firstName}` : "";
-    if (hour < 12) {
-      setGreeting(`Good morning${name} 👋`);
-    } else if (hour < 17) {
-      setGreeting(`Good afternoon${name} ☀️`);
-    } else {
-      setGreeting(`Good evening${name} 🌙`);
-    }
-  }, [user]);
+    setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
+  }, []);
 
-  // Feature 1: Current Location detection
+  // Feature 1: Current Location detection via browser Geolocation + Nominatim Reverse Geocoding
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -76,7 +78,7 @@ export default function RiderDashboard() {
     }
   }, []);
 
-  // Poll for nearby drivers
+  // Poll for nearby drivers with optimized state updates
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -86,6 +88,7 @@ export default function RiderDashboard() {
           const response = await getNearbyDrivers(pickupCoords[1], pickupCoords[0]); // pass lat, lng
           
           setNearbyDrivers(prev => {
+            // Only update state if drivers changed (prevents React from thrashing renders on MapboxMap and BookingCard)
             const prevIds = prev.map(d => `${d.userId}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}`).join(',');
             const newIds = response.drivers.map(d => `${d.userId}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}`).join(',');
             if (prevIds !== newIds) {
@@ -100,7 +103,7 @@ export default function RiderDashboard() {
     };
 
     fetchDrivers();
-    interval = setInterval(fetchDrivers, 15000);
+    interval = setInterval(fetchDrivers, 15000); // Poll every 15s instead of 10s
 
     return () => clearInterval(interval);
   }, [pickupCoords]);
@@ -114,6 +117,7 @@ export default function RiderDashboard() {
       if (locs.length > 0) {
         setDbSavedLocations(locs);
       } else {
+        // Fallback seed inside PostgreSQL if empty
         const initialLocs = [
           { label: "Home", address: "Sector 15, Part 2, Gurugram, Haryana", lat: 28.4619, lon: 77.0427 },
           { label: "Office", address: "Cyber Hub, DLF Cyber City, Gurugram", lat: 28.4950, lon: 77.0878 },
@@ -159,8 +163,19 @@ export default function RiderDashboard() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
+        const state = await getOnboardingState();
+        if (!state.success || !state.roleSelected) {
+          router.push("/select-role");
+          return;
+        }
+        if (!state.onboarded || state.role !== "rider") {
+          router.push("/onboarding");
+          return;
+        }
+
         const dbRides = await fetchUserRides();
 
+        // Map raw DB logs to the high-fidelity UI format
         const formattedRides: Ride[] = dbRides.map((r) => ({
           id: r.id,
           date: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -168,9 +183,9 @@ export default function RiderDashboard() {
           pickup: r.pickup,
           destination: r.destination,
           price: "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
-          driverName: r.driverId ? "Vetted Partner" : "Searching...",
-          driverInitials: "VP",
-          vehicle: "RYDR Clean Cabin",
+          driverName: "Vikram Malhotra",
+          driverInitials: "VM",
+          vehicle: "Tesla Model Y (White)",
           status: r.status as any,
           tier: r.rideType === "economy" ? "Economy" : r.rideType === "premium" ? "Premium" : "XL",
         }));
@@ -187,142 +202,134 @@ export default function RiderDashboard() {
     loadDashboardData();
   }, []);
 
-  const completedRides = localRides.slice(0, 3); // last 2-3 rides
-
   return (
-    <main className="relative min-h-screen bg-white text-zinc-900 antialiased pb-24 pt-8 sm:pt-12">
-      {/* Background ambient lighting */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[500px] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.02),transparent_60%)] pointer-events-none z-0" />
-      
-      <div className="max-w-4xl mx-auto px-5 sm:px-6 relative z-10 space-y-8">
+    <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28">
+      {/* Subtle global gradient glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[600px] bg-gradient-to-b from-zinc-100/50 via-transparent to-transparent pointer-events-none z-0" />
+      <Navbar />
+
+      <div className="max-w-[1400px] mx-auto px-6 sm:px-8 relative z-10">
         
-        {/* Dynamic Greeting */}
-        <div className="flex items-center justify-between">
-          <motion.h1 
+        {/* Dynamic Typography Greeting */}
+        <div className="mb-8 md:mb-12">
+          <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900"
+            transition={{ duration: 0.4 }}
+            className="text-[11px] font-mono font-bold tracking-[0.25em] text-zinc-400 uppercase leading-none"
+          >
+            Your next ride
+          </motion.p>
+          <motion.h1 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05 }}
+            className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-zinc-950 mt-2"
           >
             {greeting}
           </motion.h1>
         </div>
 
-        {/* Section 1: Map Area (wrapped in beautiful h-[200px] sm:h-[280px] rounded-2xl container) */}
-        <div className="w-full h-[200px] sm:h-[280px] rounded-2xl overflow-hidden border border-zinc-200/80 shadow-sm relative z-0">
-          <MapboxMap
-            pickupCoords={pickupCoords}
-            destinationCoords={destinationCoords}
-            pickupName={pickup}
-            destinationName={destination}
-            routeGeometry={routeGeometry}
-            distanceMiles={distanceMiles}
-            durationMins={durationMins}
-            isLoadingRoute={isLoadingRoute}
-            nearbyDrivers={nearbyDrivers}
-          />
-        </div>
-
-        {/* Section 2: Ride Booking Card */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-2 shadow-md relative z-10">
-          <RideBookingCard
-            pickup={pickup}
-            setPickup={setPickup}
-            destination={destination}
-            setDestination={setDestination}
-            pickupCoords={pickupCoords}
-            setPickupCoords={setPickupCoords}
-            destinationCoords={destinationCoords}
-            setDestinationCoords={setDestinationCoords}
-            distanceMiles={distanceMiles}
-            setDistanceMiles={setDistanceMiles}
-            durationMins={durationMins}
-            setDurationMins={setDurationMins}
-            setRouteGeometry={setRouteGeometry}
-            setIsLoadingRoute={setIsLoadingRoute}
-          />
-        </div>
-
-        {/* Section 3: Saved Locations Quick Shortcuts */}
-        <div className="space-y-3">
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Where to?</span>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0">
-            {dbSavedLocations.map((addr) => {
-              const addressIcons: any = {
-                Home: Home,
-                Office: Briefcase,
-                College: Plane,
-                Gym: Activity,
-              };
-              const Icon = addressIcons[addr.label] || MapPin;
-              return (
-                <button
-                  key={addr.id}
-                  onClick={() => handleQuickBook(addr)}
-                  className="flex items-center gap-2 px-4 py-3 bg-zinc-50 border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-100/50 rounded-xl transition-all whitespace-nowrap active:scale-[0.98] cursor-pointer shadow-3xs"
-                >
-                  <Icon className="w-4 h-4 text-zinc-500 shrink-0" />
-                  <span className="text-sm font-semibold text-zinc-950">{addr.label}</span>
-                </button>
-              );
-            })}
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 px-4 py-3 bg-white border border-dashed border-zinc-300 hover:border-zinc-400 rounded-xl transition-all whitespace-nowrap active:scale-[0.98] cursor-pointer text-zinc-500 hover:text-zinc-700 shadow-3xs"
-            >
-              <span className="text-sm font-semibold">Add Place</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Section 4: Recent Rides */}
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Recent Activity</span>
-            <Link href="/rides" className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
-              <span>View All</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
+        {/* Clean, Premium Ride Interface (Split Screen Desktop, Fluid Mobile) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch">
           
-          {loading ? (
-            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 space-y-4 animate-pulse">
-               <div className="w-1/3 h-4 bg-zinc-200 rounded" />
-               <div className="w-full h-12 bg-zinc-200 rounded" />
+          {/* Left Column: Ride Input & Shortcuts */}
+          <div className="lg:col-span-5 flex flex-col space-y-6">
+            
+            {/* Quick Shortcuts (Horizontal Scroll) */}
+            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide -mx-6 px-6 sm:mx-0 sm:px-0">
+              {dbSavedLocations.map((addr) => {
+                const addressIcons: any = {
+                  Home: Home,
+                  Office: Briefcase,
+                  College: Plane,
+                  Gym: Activity,
+                };
+                const Icon = addressIcons[addr.label] || MapPin;
+                return (
+                  <button
+                    key={addr.id}
+                    onClick={() => handleQuickBook(addr)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-200/80 hover:border-zinc-950 hover:bg-zinc-50 rounded-full transition-all whitespace-nowrap active:scale-95 cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
+                  >
+                    <Icon className="w-3.5 h-3.5 text-zinc-500" />
+                    <span className="text-[12.5px] font-bold text-zinc-800">{addr.label}</span>
+                  </button>
+                );
+              })}
+              <Link
+                href="/profile"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 border border-transparent rounded-full transition-all whitespace-nowrap active:scale-95 cursor-pointer text-zinc-600 font-bold text-[12.5px]"
+              >
+                <span>+ Custom</span>
+              </Link>
             </div>
-          ) : completedRides.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {completedRides.map((ride) => (
-                <div key={ride.id} className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4.5 space-y-3.5 shadow-3xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-3xs">
-                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-zinc-800">{ride.status}</div>
-                        <div className="text-[9px] text-zinc-400 font-semibold">{ride.date}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-black text-zinc-900">{ride.price}</div>
-                      <div className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">{ride.tier}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-[11px] text-zinc-550 font-medium bg-white border border-zinc-200 p-2.5 rounded-xl flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                    <span className="truncate">{ride.destination}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 text-center text-sm font-semibold text-zinc-400">
-              No recent rides. Where would you like to go?
-            </div>
-          )}
-        </div>
 
+            {/* Ride Booking Panel Card */}
+            <div className="bg-white rounded-3xl border border-zinc-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 transition-all duration-300 flex flex-col flex-grow justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+                  <h2 className="text-base font-black tracking-tight text-zinc-950">Hop in.</h2>
+                  <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Step 1 of 2</span>
+                </div>
+                
+                <RideBookingCard
+                  pickup={pickup}
+                  setPickup={setPickup}
+                  destination={destination}
+                  setDestination={setDestination}
+                  pickupCoords={pickupCoords}
+                  setPickupCoords={setPickupCoords}
+                  destinationCoords={destinationCoords}
+                  setDestinationCoords={setDestinationCoords}
+                  distanceMiles={distanceMiles}
+                  setDistanceMiles={setDistanceMiles}
+                  durationMins={durationMins}
+                  setDurationMins={setDurationMins}
+                  setRouteGeometry={setRouteGeometry}
+                  setIsLoadingRoute={setIsLoadingRoute}
+                />
+              </div>
+
+              {/* Minimalist Footnote instead of bulky details */}
+              <p className="text-[10.5px] text-zinc-400 font-semibold mt-6 leading-relaxed">
+                By booking, you agree to our premium safety policies. Your ride will be tracked in real-time.
+              </p>
+            </div>
+
+          </div>
+
+          {/* Right Column: Simulated/Real Map (Fills space beautifully) */}
+          <div className="lg:col-span-7 min-h-[350px] lg:min-h-[500px] flex">
+            <div className="bg-white rounded-3xl border border-zinc-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden w-full relative flex flex-col">
+              
+              {/* Subtle Map Status Overlay */}
+              <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                <div className="bg-zinc-900/90 text-white backdrop-blur-md px-3.5 py-1.5 rounded-full flex items-center space-x-2 text-[10.5px] font-bold shadow-md">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Real-time GPS Dispatch</span>
+                </div>
+              </div>
+
+              {/* Map Canvas */}
+              <div className="flex-grow w-full h-full relative z-0">
+                <MapboxMap
+                  pickupCoords={pickupCoords}
+                  destinationCoords={destinationCoords}
+                  pickupName={pickup}
+                  destinationName={destination}
+                  routeGeometry={routeGeometry}
+                  distanceMiles={distanceMiles}
+                  durationMins={durationMins}
+                  isLoadingRoute={isLoadingRoute}
+                  nearbyDrivers={nearbyDrivers}
+                />
+              </div>
+
+            </div>
+          </div>
+
+        </div>
       </div>
     </main>
   );

@@ -1,14 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, type ComponentType } from "react";
-import { CarFront, CircleDot, Coins, ShieldCheck, TrendingUp, UserCircle2, Loader2, ArrowRight } from "lucide-react";
+import { CarFront, Circle, CircleDot, Coins, ShieldCheck, TrendingUp, UserCircle2, Loader2, Navigation, MapPin, AlertTriangle, ArrowRight } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import { getOnboardingState } from "@/actions/onboarding";
 import {
+  acceptedRides,
+  completedRides,
   driverProfile,
+  earningsBreakdown,
   earningsSummaryCards,
   monthlyEarnings,
+  rideRequests,
   weeklyPayouts,
   type DriverAvailability,
+  type DriverRideStatus,
 } from "@/lib/driver-portal";
 import {
   fetchAvailableRideRequests,
@@ -22,46 +30,111 @@ import {
   updateRideStatusAction,
 } from "@/actions/driver";
 import { getRouteDistance, calculateFare } from "@/lib/data";
+import { motion } from "framer-motion";
 
 type DriverPortalView = "overview" | "rides" | "earnings";
 type IconType = ComponentType<{ className?: string }>;
 
 const statusStyles: Record<string, string> = {
-  "New Request": "bg-amber-50 text-amber-700 border-amber-100",
-  Accepted: "bg-blue-50 text-blue-700 border-blue-100",
-  "Driver Arriving": "bg-blue-50 text-blue-700 border-blue-100",
-  "On Trip": "bg-emerald-50 text-emerald-700 border-emerald-100",
-  Completed: "bg-zinc-100 text-zinc-700 border-zinc-200",
-  Cancelled: "bg-red-50 text-red-700 border-red-100",
+  "New Request": "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  Accepted: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  "Driver Arriving": "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
+  "On Trip": "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  Completed: "bg-zinc-100 text-zinc-600 border-zinc-200",
+  Cancelled: "bg-red-500/10 text-red-600 border-red-500/20",
 };
 
 const tierStyles: Record<string, string> = {
-  Daily: "bg-zinc-100 text-zinc-700",
-  "EV Eco": "bg-emerald-50 text-emerald-700",
-  Luxe: "bg-amber-50 text-amber-700",
+  Daily: "bg-zinc-150 text-zinc-800",
+  "EV Eco": "bg-emerald-500/10 text-emerald-600",
+  Luxe: "bg-amber-500/10 text-amber-600",
 };
 
-function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+const driverGreetings = [
+  "💸 Ready to make some money?",
+  "🚖 Riders are waiting.",
+  "🔥 Let's make today count.",
+  "☕ One more ride before chai?",
+  "😎 Online and looking sharp."
+];
+
+function SubNavigation({ activeView }: { activeView: DriverPortalView }) {
   return (
-    <div className="space-y-1.5">
-      <span className="eyebrow">{eyebrow}</span>
-      <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900">{title}</h2>
-      <p className="text-xs sm:text-sm text-zinc-500 font-medium">{description}</p>
+    <div className="flex items-center space-x-1.5 p-1 bg-zinc-900/5 rounded-full self-start">
+      <Link
+        href="/driver"
+        className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 ${
+          activeView === "overview"
+            ? "bg-white text-zinc-950 shadow-xs"
+            : "text-zinc-550 hover:text-zinc-950"
+        }`}
+      >
+        Console
+      </Link>
+      <Link
+        href="/driver/rides"
+        className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 ${
+          activeView === "rides"
+            ? "bg-white text-zinc-950 shadow-xs"
+            : "text-zinc-550 hover:text-zinc-950"
+        }`}
+      >
+        Dispatches
+      </Link>
+      <Link
+        href="/driver/earnings"
+        className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 ${
+          activeView === "earnings"
+            ? "bg-white text-zinc-950 shadow-xs"
+            : "text-zinc-550 hover:text-zinc-950"
+        }`}
+      >
+        Earnings
+      </Link>
     </div>
   );
 }
 
-function StatCard({ label, value, detail, icon: Icon }: { label: string; value: string; detail: string; icon: IconType }) {
+function PremiumAvailabilityToggle({ availability, setAvailability }: { availability: DriverAvailability; setAvailability: (value: DriverAvailability) => void }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm hover:border-zinc-300 transition-all hover-lift">
-      <div className="flex justify-between items-start mb-3">
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{label}</span>
-        <div className="h-8 w-8 rounded-lg bg-zinc-50 border border-zinc-150 flex items-center justify-center text-zinc-500">
-          <Icon className="h-4 w-4" />
-        </div>
+    <div className="flex items-center gap-3">
+      <div className="bg-zinc-900/5 p-1 rounded-full flex items-center shadow-2xs border border-zinc-200/20">
+        <button
+          onClick={() => setAvailability("Offline")}
+          className={`px-4 py-2 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+            availability === "Offline"
+              ? "bg-white text-zinc-950 shadow-xs"
+              : "text-zinc-500 hover:text-zinc-950"
+          }`}
+        >
+          Offline
+        </button>
+        <button
+          onClick={() => setAvailability("Online")}
+          className={`px-4 py-2 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+            availability === "Online"
+              ? "bg-zinc-950 text-white shadow-xs"
+              : "text-zinc-500 hover:text-zinc-950"
+          }`}
+        >
+          Online
+        </button>
       </div>
-      <p className="text-2xl font-black text-zinc-900 leading-none">{value}</p>
-      <p className="text-[11px] text-zinc-450 font-semibold mt-2">{detail}</p>
+
+      <div
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-[11.5px] font-bold shadow-3xs transition-all duration-300 ${
+          availability === "Online"
+            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+            : "border-zinc-200 bg-zinc-100 text-zinc-500"
+        }`}
+      >
+        {availability === "Online" ? (
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+        ) : (
+          <span className="h-2 w-2 rounded-full bg-zinc-400" />
+        )}
+        <span>{availability}</span>
+      </div>
     </div>
   );
 }
@@ -83,59 +156,69 @@ function RideTile({
   meta: string;
   amount: string;
   tier: "Daily" | "EV Eco" | "Luxe";
-  status?: string;
+  status?: DriverRideStatus | string;
   onAccept?: () => void;
   onDecline?: () => void;
   onUpdateStatus?: (status: string) => void;
   onComplete?: () => void;
 }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm hover:border-zinc-300 transition-all space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        {status ? (
-          <span className={`rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${statusStyles[status] || "bg-zinc-100"}`}>
-            {status}
-          </span>
-        ) : (
-          <span />
-        )}
-        <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${tierStyles[tier] || "bg-zinc-100"}`}>
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.015)] hover:border-zinc-400 transition-all duration-200">
+      <div className="flex items-center justify-between mb-4.5">
+        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${tierStyles[tier]}`}>
           {tier}
         </span>
+        {status && (
+          <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider ${statusStyles[status]}`}>
+            {status}
+          </span>
+        )}
       </div>
       
-      <div>
-        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Passenger</span>
-        <p className="text-sm font-bold text-zinc-800 mt-0.5">{rider}</p>
-      </div>
-
-      <div>
-        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Route Corridor</span>
-        <p className="text-sm font-semibold text-zinc-900 mt-0.5">{route}</p>
+      <div className="space-y-3.5">
+        <div>
+          <p className="text-[10px] font-mono font-semibold text-zinc-400 uppercase tracking-widest leading-none">Passenger</p>
+          <p className="text-[13.5px] font-bold text-zinc-950 mt-1">{rider}</p>
+        </div>
+        
+        <div>
+          <p className="text-[10px] font-mono font-semibold text-zinc-400 uppercase tracking-widest leading-none">Trip Route</p>
+          <div className="flex items-start gap-2 mt-1.5">
+            <div className="flex flex-col items-center mt-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-zinc-950" />
+              <div className="w-[1.5px] h-4 bg-zinc-200" />
+              <div className="w-1.5 h-1.5 rounded-full border border-zinc-950 bg-white" />
+            </div>
+            <div className="text-[13px] text-zinc-800 leading-snug font-semibold">
+              <p className="text-zinc-950">{route}</p>
+              <p className="text-zinc-450 text-[11.5px] font-normal mt-0.5">{meta}</p>
+            </div>
+          </div>
+        </div>
       </div>
       
-      <div className="flex items-center justify-between gap-3 text-xs text-zinc-500 font-semibold border-t border-zinc-100 pt-3 mt-2">
-        <span>{meta}</span>
-        <span className="text-base font-extrabold text-zinc-950">{amount}</span>
+      <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-4.5">
+        <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase">Payout</span>
+        <span className="text-lg font-black text-zinc-950">{amount}</span>
       </div>
 
-      {/* Accept & Decline controls */}
+      {/* Accept & Decline incoming triggers */}
       {(onAccept || onDecline) && (
-        <div className="flex items-center gap-3 pt-3 border-t border-zinc-100">
+        <div className="mt-4 flex items-center gap-2">
           {onDecline && (
             <button
               onClick={onDecline}
-              className="flex-1 py-2.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 font-bold border border-zinc-200 text-xs rounded-xl transition-all cursor-pointer shadow-3xs active:scale-[0.98]"
+              className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97"
             >
-              Decline
+              Pass
             </button>
           )}
           {onAccept && (
             <button
               onClick={onAccept}
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+              className="flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 shadow-sm"
             >
-              Accept Request
+              Accept Trip
             </button>
           )}
         </div>
@@ -143,11 +226,11 @@ function RideTile({
 
       {/* Active Trip Progress buttons */}
       {(onUpdateStatus || onComplete) && (
-        <div className="pt-3 border-t border-zinc-100">
+        <div className="mt-4">
           {status === "Accepted" && onUpdateStatus && (
             <button
               onClick={() => onUpdateStatus("Driver Arriving")}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+              className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97"
             >
               Mark Arrived
             </button>
@@ -155,15 +238,15 @@ function RideTile({
           {status === "Driver Arriving" && onUpdateStatus && (
             <button
               onClick={() => onUpdateStatus("On Trip")}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+              className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97"
             >
-              Start Trip
+              Start Ride
             </button>
           )}
           {status === "On Trip" && onComplete && (
             <button
               onClick={onComplete}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm active:scale-[0.98] flex items-center justify-center space-x-1.5"
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 flex items-center justify-center space-x-1.5"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Complete Trip</span>
@@ -176,11 +259,20 @@ function RideTile({
 }
 
 export default function DriverPortalShell({ view }: { view: DriverPortalView }) {
-  const [currentView, setCurrentView] = useState<DriverPortalView>(view);
-  const [availability, setAvailability] = useState<DriverAvailability>("Online");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [availability, setAvailability] = useState<DriverAvailability>("Offline"); // Default to Offline when checking status
+  const [verificationStatus, setVerificationStatus] = useState<string>("Pending");
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [greeting, setGreeting] = useState(driverGreetings[0]);
 
-  // Operational queues loaded from PostgreSQL DB actions
+  // Temporary Debug State styled beautifully
+  const [debugLat, setDebugLat] = useState<number | null>(null);
+  const [debugLng, setDebugLng] = useState<number | null>(null);
+  const [debugLastUpdated, setDebugLastUpdated] = useState<string | null>(null);
+
+  // Reactive operational queues loaded from PostgreSQL DB actions
   const [requests, setRequests] = useState<any[]>([]);
   const [accepted, setAccepted] = useState<any[]>([]);
   const [completed, setCompleted] = useState<any[]>([]);
@@ -188,11 +280,28 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     todayEarnings: "₹0",
     activeRequestsCount: 0,
     completedRidesCount: 0,
-    driverRating: "4.98 ★",
+    driverRating: "4.99 ★",
   });
+
+  useEffect(() => {
+    setGreeting(driverGreetings[Math.floor(Math.random() * driverGreetings.length)]);
+  }, []);
 
   const loadDashboardData = async () => {
     try {
+      const state = await getOnboardingState();
+      if (!state.success || !state.roleSelected) {
+        router.push("/select-role");
+        return;
+      }
+      if (!state.onboarded || state.role !== "driver") {
+        router.push("/onboarding");
+        return;
+      }
+
+      setVerificationStatus(state.driverProfile?.verificationStatus || "Pending");
+      setRejectionReason(state.driverProfile?.rejectionReason || null);
+
       const [dbRequests, dbActive, dbCompleted, dbStats] = await Promise.all([
         fetchAvailableRideRequests(),
         fetchDriverActiveRides(),
@@ -206,7 +315,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         return {
           id: r.id,
           rider: r.user?.name || "Passenger",
-          pickup: `${r.pickup.split(",")[0]} ➔ ${r.destination.split(",")[0]}`,
+          pickup: r.pickup.split(",")[0],
           destination: r.destination.split(",")[0],
           distance: `${dist} km`,
           fare: r.fare ? `₹${r.fare}` : `₹${fare}`,
@@ -258,6 +367,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
   useEffect(() => {
     loadDashboardData();
     
+    // Interval for fetching ride requests repeatedly
     const interval = setInterval(() => {
       loadDashboardData();
     }, 10000);
@@ -274,6 +384,9 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             try {
+              setDebugLat(position.coords.latitude);
+              setDebugLng(position.coords.longitude);
+              setDebugLastUpdated(new Date().toLocaleTimeString());
               await updateDriverLocation(
                 position.coords.latitude,
                 position.coords.longitude,
@@ -351,94 +464,178 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     }
   };
 
-  return (
-    <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-24 pt-8 sm:pt-12">
-      {/* Subtle top glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[500px] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.02),transparent_60%)] pointer-events-none z-0" />
-      
-      <div className="relative z-10 mx-auto max-w-4xl px-5 sm:px-6 space-y-8">
-        
-        {/* Top Header Card: Greeting & Tab Switched controls */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900">
-              Ready to earn today? 💪
+  if (verificationStatus !== "Approved") {
+    return (
+      <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28">
+        <div className="absolute inset-0 premium-grid-fine opacity-[0.04] pointer-events-none" />
+        <Navbar />
+
+        <div className="max-w-[600px] mx-auto px-6 relative z-10 pt-8 text-center space-y-6">
+          <div className="relative flex justify-center">
+            {verificationStatus === "Rejected" ? (
+              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 text-red-600 flex items-center justify-center shadow-lg animate-float-slow">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shadow-lg animate-float-slow">
+                <Loader2 className="w-7 h-7 animate-spin" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <span className={`text-[10px] font-mono tracking-widest font-extrabold uppercase px-3.5 py-1 rounded-full border ${
+              verificationStatus === "Rejected"
+                ? "bg-red-50 text-red-600 border-red-200"
+                : "bg-amber-50 text-amber-600 border-amber-200"
+            }`}>
+              Verification: {verificationStatus}
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-950">
+              {verificationStatus === "Rejected" ? "Verification Rejected" : "Compliance Verification Pending"}
             </h1>
-            <p className="text-zinc-500 text-xs sm:text-sm font-medium">
-              Delhi NCR driver dispatcher portal active.
+            <p className="text-xs text-zinc-500 font-semibold leading-relaxed max-w-sm mx-auto">
+              {verificationStatus === "Rejected"
+                ? "Your document review has been declined. Please check the reason below and re-submit your onboarding data."
+                : "Your professional driver credentials and vehicle files are currently under compliance review. You cannot go online until approved."}
             </p>
           </div>
 
-          {/* Internal Tab Switcher */}
-          <div className="flex bg-zinc-100 p-1.5 border border-zinc-200 rounded-2xl w-fit">
-            {(["overview", "rides", "earnings"] as DriverPortalView[]).map((v) => (
+          {verificationStatus === "Rejected" && rejectionReason && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-left max-w-md mx-auto space-y-1">
+              <span className="text-[10px] font-mono font-bold text-red-500 uppercase tracking-wide">Declined Reason</span>
+              <p className="text-xs font-bold text-red-800 leading-normal">{rejectionReason}</p>
+            </div>
+          )}
+
+          <div className="bg-white border border-zinc-200 rounded-3xl p-6 text-left max-w-md mx-auto space-y-3 font-mono text-[11px] text-zinc-650 shadow-sm">
+            <div className="flex justify-between pb-2 border-b border-zinc-150 font-bold text-zinc-900 uppercase">
+              <span>CHECKLIST</span>
+              <span>STATUS</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Aadhaar & PAN Match</span>
+              <span className="text-emerald-600 font-bold uppercase text-[9.5px]">✓ Submitted</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Driving License</span>
+              <span className="text-emerald-600 font-bold uppercase text-[9.5px]">✓ Submitted</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>RC & Insurance</span>
+              <span className="text-emerald-600 font-bold uppercase text-[9.5px]">✓ Submitted</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Compliance Review</span>
+              {verificationStatus === "Rejected" ? (
+                <span className="text-red-600 font-bold uppercase text-[9.5px]">✕ Rejected</span>
+              ) : (
+                <span className="text-amber-600 font-bold uppercase text-[9.5px] animate-pulse">● In Review</span>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-6 space-y-4">
+            {verificationStatus === "Rejected" && (
               <button
-                key={v}
-                onClick={() => setCurrentView(v)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  currentView === v 
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-900"
-                }`}
+                onClick={() => router.push("/onboarding")}
+                className="w-full max-w-[200px] mx-auto py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm"
               >
-                {v}
+                Re-submit Documents
               </button>
-            ))}
+            )}
+
+            <div className="text-[11.5px] text-zinc-400 font-semibold">
+              Testing RYDR?{" "}
+              <Link href="/admin" className="text-zinc-900 font-extrabold hover:underline inline-flex items-center space-x-0.5">
+                <span>Open Admin Dashboard to Approve</span>
+                <ArrowRight className="w-3.5 h-3.5 text-zinc-800" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28">
+      {/* Global backdrop visual grid */}
+      <div className="absolute inset-0 premium-grid-fine opacity-[0.04] pointer-events-none" />
+      <Navbar />
+
+      <div className="max-w-[1200px] mx-auto px-6 sm:px-8 relative z-10 space-y-8">
+        
+        {/* Core Controls Header (Spacious and Premium) */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 pb-6 border-b border-zinc-200/60">
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-mono font-bold tracking-[0.25em] text-zinc-400 uppercase leading-none">
+              Driver portal
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-950 leading-tight">
+              {greeting}
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <SubNavigation activeView={view} />
+            <PremiumAvailabilityToggle availability={availability} setAvailability={setAvailability} />
           </div>
         </div>
 
-        {/* Prominent Satisfying Go Online Toggle Card */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Operator Status</span>
-            <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${availability === "Online" ? "bg-emerald-500 animate-pulse" : "bg-zinc-400"}`} />
-              <p className="text-lg font-black text-zinc-900 leading-none">
-                You are currently {availability === "Online" ? "Receiving Trips" : "Offline"}
-              </p>
-            </div>
-          </div>
-
-          {/* Satisfying toggle switch */}
-          <button
-            onClick={() => setAvailability(availability === "Online" ? "Offline" : "Online")}
-            className={`w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-md active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              availability === "Online"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/10"
-                : "bg-zinc-800 hover:bg-zinc-900 text-white shadow-zinc-800/10"
-            }`}
-          >
-            <span>Go {availability === "Online" ? "Offline" : "Online"}</span>
-          </button>
-        </div>
-
-        {/* Overview Dashboard Hub */}
-        {currentView === "overview" && (
-          <div className="space-y-8">
-            {/* Stats Grid */}
-            <div className="grid gap-5 grid-cols-2 sm:grid-cols-4">
-              <StatCard label="Today's Earnings" value={stats.todayEarnings} detail="Base fares, bonuses, tips" icon={Coins} />
-              <StatCard label="Active Requests" value={availability === "Online" ? requests.length.toString() : "0"} detail="Trips in pool waiting" icon={CarFront} />
-              <StatCard label="Completed Rides" value={stats.completedRidesCount.toString()} detail="Trips done this shift" icon={TrendingUp} />
-              <StatCard label="Driver Rating" value={stats.driverRating} detail="Top Vetted Operator" icon={UserCircle2} />
-            </div>
-
-            {/* Main dashboard columns */}
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-[1.2fr_0.8fr]">
-              {/* Requests Queue Column */}
-              <div className="bg-white border border-zinc-200 p-6 rounded-3xl shadow-sm space-y-5">
-                <SectionHeading eyebrow="DRIVER QUEUE" title="Active Ride Requests" description="Incoming booking requests waiting for your immediate approval." />
+        {/* ── View: Overview (Console) ── */}
+        {view === "overview" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left Main Stream: Shift Earnings & Live Queue */}
+            <div className="lg:col-span-8 space-y-8">
+              
+              {/* Premium Shift Earnings Banner (No bulky boxes) */}
+              <div className="bg-zinc-950 text-white rounded-3xl p-6.5 relative overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
+                {/* background lights */}
+                <div className="absolute right-0 bottom-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                 
-                <div className="space-y-4">
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Shift Earnings</span>
+                    <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-white mt-1.5">{stats.todayEarnings}</h2>
+                    <p className="text-[12px] text-zinc-400 font-semibold mt-1">Base fares + tips accumulated today</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-right sm:border-l sm:border-zinc-800 sm:pl-8">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Runs</span>
+                      <p className="text-2xl font-black text-white mt-1">{stats.completedRidesCount}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Rating</span>
+                      <p className="text-2xl font-black text-white mt-1">{stats.driverRating}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Ride Requests Queue */}
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-black tracking-tight text-zinc-900">Live Requests Feed</h3>
+                  {availability === "Online" && (
+                    <span className="text-[10.5px] text-emerald-600 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full animate-pulse">
+                      Live dispatching...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {availability === "Offline" ? (
-                    <div className="py-12 text-center flex flex-col items-center justify-center space-y-4 border border-dashed border-zinc-200 rounded-2xl bg-zinc-50/50">
-                      <div className="p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-400">
-                        <CarFront className="w-6 h-6 stroke-[1.5]" />
+                    <div className="col-span-full py-16 text-center border border-dashed border-zinc-200/80 bg-white rounded-3xl flex flex-col items-center justify-center space-y-4 shadow-sm">
+                      <div className="p-4 bg-zinc-50 rounded-2xl text-zinc-400 border border-zinc-100">
+                        <CarFront className="w-8 h-8" />
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-extrabold text-zinc-950">You are offline</h4>
-                        <p className="text-xs text-zinc-500 max-w-[240px] mx-auto font-semibold leading-normal">
-                          Go online using the status toggle controls to start receiving live incoming ride requests.
+                      <div>
+                        <h4 className="text-[14px] font-bold text-zinc-950">You are currently offline</h4>
+                        <p className="text-xs text-zinc-450 font-semibold max-w-[280px] mx-auto mt-1 leading-normal">
+                          Go online using the controller toggle to start receiving live incoming client bookings in Delhi NCR.
                         </p>
                       </div>
                     </div>
@@ -457,101 +654,127 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       />
                     ))
                   ) : (
-                    <div className="py-12 text-center flex flex-col items-center justify-center space-y-4 border border-dashed border-zinc-200 rounded-2xl bg-zinc-50/50">
-                      <div className="p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-400">
-                        <CircleDot className="w-5 h-5 animate-pulse text-zinc-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-extrabold text-zinc-950">Queue is clear</h4>
-                        <p className="text-xs text-zinc-500 font-semibold">
-                          Waiting for new incoming passenger requests in your city...
+                    <div className="col-span-full py-16 text-center border border-dashed border-zinc-200/80 bg-white rounded-3xl flex flex-col items-center justify-center space-y-4 shadow-sm">
+                      <div className="h-8 w-8 rounded-full border-2 border-zinc-450 border-t-transparent animate-spin" />
+                      <div>
+                        <h4 className="text-[14px] font-bold text-zinc-950">Waiting for requests...</h4>
+                        <p className="text-xs text-zinc-450 font-semibold mt-1">
+                          The dispatch board is currently clear. Stand by at local hot spots for premium rides.
                         </p>
                       </div>
                     </div>
                   )}
                 </div>
+              </section>
+
+              {/* Expanded, Telemetry-styled Debug Block (Premium design) */}
+              <div className="bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-3xl p-5 shadow-inner">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-3.5">
+                  <span className="text-[10px] font-mono font-bold tracking-[0.2em] text-zinc-450 uppercase">REAL-TIME GPS TELEMETRY</span>
+                  <span className="text-[10.5px] font-mono text-zinc-550">{debugLastUpdated ?? "Standby"}</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-[11.5px] text-zinc-300">
+                  <div>
+                    <p className="text-zinc-550 text-[9.5px] uppercase">Latitude</p>
+                    <p className="font-bold text-white mt-0.5">{debugLat ? debugLat.toFixed(5) : "Searching GPS..."}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-550 text-[9.5px] uppercase">Longitude</p>
+                    <p className="font-bold text-white mt-0.5">{debugLng ? debugLng.toFixed(5) : "Searching GPS..."}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-550 text-[9.5px] uppercase">Telemetry</p>
+                    <p className="font-bold text-emerald-500 mt-0.5">Active</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-550 text-[9.5px] uppercase">Console link</p>
+                    <p className="font-bold text-white mt-0.5">{availability}</p>
+                  </div>
+                </div>
               </div>
 
-              {/* Sidebar Profile & History Column */}
-              <div className="bg-zinc-50 border border-zinc-200 p-6 rounded-3xl shadow-sm space-y-6">
-                <SectionHeading eyebrow="PROFILE HUB" title="Driver Overview" description="Operator verification badges and completed shift trips." />
+            </div>
+
+            {/* Right Sidebar: Quick Profile & Timeline History */}
+            <div className="lg:col-span-4 space-y-6">
+              
+              {/* Minimalist Profile Details Card */}
+              <div className="rounded-3xl border border-zinc-200/80 bg-white p-5.5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 bg-zinc-950 text-white rounded-full flex items-center justify-center font-black text-sm shadow-md">
+                    {driverProfile.initials}
+                  </div>
+                  <div>
+                    <h4 className="text-[14.5px] font-bold text-zinc-950 leading-none">{driverProfile.name}</h4>
+                    <p className="text-[10.5px] text-zinc-400 font-bold uppercase mt-1 tracking-wider">{driverProfile.city} Fleet</p>
+                  </div>
+                </div>
                 
-                <div className="bg-white border border-zinc-200 p-5 rounded-2xl shadow-3xs space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-900 text-sm font-black text-white shadow-md">
-                      {driverProfile.initials}
-                    </div>
-                    <div>
-                      <p className="text-base font-bold text-zinc-950 leading-tight">{driverProfile.name}</p>
-                      <p className="text-[10px] text-zinc-450 font-bold uppercase mt-0.5 tracking-wider">{driverProfile.city} Operator</p>
-                    </div>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-3 shadow-3xs">
+                    <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide">Vehicle</span>
+                    <p className="text-[12px] font-bold text-zinc-800 mt-0.5 leading-tight">{driverProfile.vehicle}</p>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-zinc-800">
-                    <div className="bg-zinc-50 border border-zinc-200 p-3 rounded-xl">
-                      <p className="text-[8px] font-bold uppercase tracking-wider text-zinc-400">VEHICLE CLASS</p>
-                      <p className="mt-1 font-bold text-zinc-900 leading-tight">{driverProfile.vehicle}</p>
-                    </div>
-                    <div className="bg-zinc-50 border border-zinc-200 p-3 rounded-xl">
-                      <p className="text-[8px] font-bold uppercase tracking-wider text-zinc-400">PLATE NUMBER</p>
-                      <p className="mt-1 font-bold text-zinc-900 leading-tight font-mono">{driverProfile.plate}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 pt-1">
-                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    <span>Background Verified • Joined {driverProfile.memberSince}</span>
+                  <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-3 shadow-3xs">
+                    <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide">Plate No</span>
+                    <p className="text-[12px] font-bold text-zinc-800 mt-0.5 leading-tight font-mono">{driverProfile.plate}</p>
                   </div>
                 </div>
 
-                <div className="h-[1px] bg-zinc-200 my-2" />
+                <div className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500 pt-1 border-t border-zinc-100">
+                  <ShieldCheck className="h-4 w-4 text-zinc-800" />
+                  <span>Aadhaar Verified Operator</span>
+                </div>
+              </div>
 
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">LATEST COMPLETED RUNS</h4>
-                  {completed.slice(0, 3).map((ride) => (
-                    <div key={ride.id} className="bg-white border border-zinc-200 p-4 rounded-xl shadow-3xs space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider shadow-3xs ${tierStyles[ride.tier] || "bg-zinc-100"}`}>
+              {/* Latest Runs Timeline */}
+              <div className="space-y-4">
+                <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Shift Timeline</h4>
+                
+                <div className="space-y-3.5">
+                  {completed.slice(0, 2).map((ride) => (
+                    <div key={ride.id} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:border-zinc-350 transition-all flex flex-col space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${tierStyles[ride.tier]}`}>
                           {ride.tier}
                         </span>
-                        <span className="text-[10.5px] text-zinc-400 font-bold">{ride.time}</span>
+                        <span className="text-[10px] text-zinc-400 font-mono font-bold">{ride.time}</span>
                       </div>
-                      <div>
-                        <p className="text-[10px] text-zinc-400 uppercase tracking-wider leading-none">Passenger</p>
-                        <p className="text-xs font-bold text-zinc-800 leading-tight mt-1">{ride.rider}</p>
-                        
-                        <p className="text-[10px] text-zinc-400 uppercase tracking-wider leading-none mt-3">Route</p>
-                        <p className="text-xs font-bold text-zinc-900 leading-tight mt-1 truncate">{ride.route}</p>
+                      <div className="text-[12.5px] font-semibold text-zinc-800">
+                        <p className="text-zinc-950 truncate">{ride.route}</p>
+                        <p className="text-zinc-400 text-[10.5px] mt-0.5">Passenger: {ride.rider}</p>
                       </div>
-                      <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 border-t border-zinc-100 pt-2.5 mt-1 leading-none">
-                        <span>{ride.rating} Rating ★</span>
-                        <span className="font-extrabold text-zinc-950">{ride.payout}</span>
+                      <div className="flex items-center justify-between text-[11px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 mt-1">
+                        <span>★ 5.0 Rating</span>
+                        <span className="text-zinc-950 font-black">{ride.payout}</span>
                       </div>
                     </div>
                   ))}
                   {completed.length === 0 && (
-                    <p className="text-xs text-zinc-450 font-semibold text-center py-4">No completed runs recorded.</p>
+                    <p className="text-xs text-zinc-400 font-semibold text-center py-4 bg-white border border-zinc-200 rounded-2xl">No completed runs recorded.</p>
                   )}
                 </div>
               </div>
+
             </div>
+
           </div>
         )}
 
-        {/* Rides List Hub */}
-        {currentView === "rides" && (
+        {/* ── View: Rides (Active Dispatches list) ── */}
+        {view === "rides" && (
           <div className="space-y-8">
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-              {/* Requests Column */}
-              <div className="bg-white border border-zinc-200 p-5 rounded-3xl shadow-sm space-y-4">
-                <SectionHeading eyebrow="INCOMING" title="Requests Queue" description="Trips waiting for your dispatcher approval." />
-                
-                <div className="space-y-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Requests column */}
+              <div className="space-y-4.5">
+                <div className="pb-3 border-b border-zinc-200 flex items-center justify-between">
+                  <h3 className="text-sm font-black tracking-tight text-zinc-950 uppercase font-mono">1. Incoming Requests</h3>
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                </div>
+                <div className="space-y-4">
                   {availability === "Offline" ? (
-                    <div className="py-8 text-center flex flex-col items-center justify-center space-y-3">
-                      <CarFront className="w-5 h-5 text-zinc-400" />
-                      <p className="text-xs text-zinc-500 font-semibold">Offline. Go online to see requests.</p>
-                    </div>
+                    <p className="text-xs text-zinc-400 font-semibold text-center py-8 bg-white border border-zinc-200 rounded-2xl">Offline.</p>
                   ) : requests.length > 0 ? (
                     requests.map((request) => (
                       <RideTile
@@ -567,19 +790,18 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       />
                     ))
                   ) : (
-                    <div className="py-12 text-center flex flex-col items-center justify-center space-y-3">
-                      <CircleDot className="w-4 h-4 text-zinc-500 animate-pulse" />
-                      <p className="text-xs text-zinc-500 font-semibold">Queue is clear.</p>
-                    </div>
+                    <p className="text-xs text-zinc-400 font-semibold text-center py-8 bg-white border border-zinc-200 rounded-2xl">No incoming requests.</p>
                   )}
                 </div>
               </div>
 
-              {/* Assigned Column */}
-              <div className="bg-white border border-zinc-200 p-5 rounded-3xl shadow-sm space-y-4">
-                <SectionHeading eyebrow="ASSIGNED" title="Active Dispatches" description="Accepted trips in transit or pickup phase." />
-                
-                <div className="space-y-3.5">
+              {/* Accepted column */}
+              <div className="space-y-4.5">
+                <div className="pb-3 border-b border-zinc-200 flex items-center justify-between">
+                  <h3 className="text-sm font-black tracking-tight text-zinc-950 uppercase font-mono">2. Active Dispatches</h3>
+                  <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                </div>
+                <div className="space-y-4">
                   {accepted.length > 0 ? (
                     accepted.map((ride) => (
                       <RideTile
@@ -595,21 +817,23 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       />
                     ))
                   ) : (
-                    <div className="py-12 text-center flex flex-col items-center justify-center space-y-4 border border-dashed border-zinc-200 bg-zinc-50/50 rounded-2xl">
-                      <CarFront className="w-5 h-5 text-zinc-400" />
-                      <p className="text-xs text-zinc-500 font-semibold max-w-[200px] mx-auto text-center leading-normal">
-                        No assigned rides. Accept requests from the queue to start.
+                    <div className="py-12 text-center border border-dashed border-zinc-200 bg-white rounded-2xl p-6">
+                      <CarFront className="w-5 h-5 text-zinc-350 mx-auto" />
+                      <p className="text-xs text-zinc-500 font-semibold mt-2 leading-relaxed">
+                        No assigned rides. Accept requests from the queue.
                       </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Completed Column */}
-              <div className="bg-white border border-zinc-200 p-5 rounded-3xl shadow-sm space-y-4">
-                <SectionHeading eyebrow="SHIFT JOURNAL" title="Completed Runs" description="Successfully closed dispatches this shift." />
-                
-                <div className="space-y-3.5">
+              {/* Completed column */}
+              <div className="space-y-4.5">
+                <div className="pb-3 border-b border-zinc-200 flex items-center justify-between">
+                  <h3 className="text-sm font-black tracking-tight text-zinc-950 uppercase font-mono">3. Completed Runs</h3>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                </div>
+                <div className="space-y-4">
                   {completed.length > 0 ? (
                     completed.map((ride) => (
                       <RideTile
@@ -622,81 +846,84 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       />
                     ))
                   ) : (
-                    <div className="py-12 text-center text-xs text-zinc-450 font-semibold">
-                      No rides completed yet.
-                    </div>
+                    <p className="text-xs text-zinc-400 font-semibold text-center py-8 bg-white border border-zinc-200 rounded-2xl">No rides completed yet.</p>
                   )}
                 </div>
               </div>
+
             </div>
           </div>
         )}
 
-        {/* Earnings Hub */}
-        {currentView === "earnings" && (
+        {/* ── View: Earnings (Shift Financials Ledger) ── */}
+        {view === "earnings" && (
           <div className="space-y-8">
-            <div className="bg-white border border-zinc-200 p-6 rounded-3xl shadow-sm">
-              <SectionHeading eyebrow="FINANCE CENTER" title="Weekly & Monthly Payouts" description="A clean transparent review of completed shift payouts, bonus incentives, and tips." />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
-              <div className="mt-6 grid gap-4 grid-cols-2 sm:grid-cols-5">
-                <StatCard label="Weekly Earnings" value="₹12,450" detail="5-day shift total" icon={TrendingUp} />
-                {monthlyEarnings.map((item) => (
-                  <StatCard key={item.label} label={item.label} value={item.value} detail={item.note} icon={Coins} />
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-[1.2fr_0.8fr]">
-              {/* Monthly Summary Cards */}
-              <div className="bg-white border border-zinc-200 p-6 rounded-3xl shadow-sm space-y-5">
-                <SectionHeading eyebrow="FINANCE METRICS" title="Monthly Summary Cards" description="Month-to-date shift aggregates and rush-hour surge payouts." />
-                
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                  {earningsSummaryCards.map((item) => (
-                    <div key={item.label} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 shadow-3xs hover-lift">
-                      <p className="text-[8.5px] font-bold uppercase tracking-wider text-zinc-400">{item.label}</p>
-                      <p className="mt-1.5 text-xl font-black text-zinc-950">{item.value}</p>
-                      <p className="mt-1 text-xs font-semibold text-zinc-500">{item.note}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Weekly payouts list column */}
-              <div className="bg-white border border-zinc-200 p-6 rounded-3xl shadow-sm space-y-6">
-                <SectionHeading eyebrow="SHIFT SCHEDULE" title="Weekly Payout Journal" description="Recent day shift pay structures." />
-                
-                <div className="space-y-3">
-                  {weeklyPayouts.map((item) => (
-                    <div key={item.label} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-3xs">
-                      <div className="flex items-center justify-between gap-3 leading-none">
+              {/* Left Column: Weekly payout journal */}
+              <div className="lg:col-span-8 space-y-6">
+                <div className="bg-white border border-zinc-200 rounded-3xl p-6.5 shadow-sm space-y-5">
+                  <h3 className="text-base font-black text-zinc-950 tracking-tight">Shift pay structures</h3>
+                  
+                  <div className="space-y-3">
+                    {weeklyPayouts.map((item) => (
+                      <div key={item.label} className="bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-100 rounded-2xl p-4.5 shadow-3xs flex items-center justify-between transition-colors">
                         <div>
-                          <p className="text-xs font-bold uppercase tracking-wider text-zinc-450">{item.label}</p>
-                          <p className="text-[11px] text-zinc-500 mt-1 font-semibold">{item.note}</p>
+                          <p className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wide">{item.label}</p>
+                          <p className="text-xs font-semibold text-zinc-500 mt-1">{item.note}</p>
                         </div>
-                        <p className="text-base font-extrabold text-zinc-950">{item.value}</p>
+                        <p className="text-lg font-black text-zinc-950 font-sans">{item.value}</p>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 text-white shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">DAILY ACCRUED PAYOUT</p>
-                  <p className="mt-2 text-2xl font-black">{stats.todayEarnings}</p>
-                  <p className="mt-2 text-[10px] text-zinc-400 font-semibold">Expected shift payout finalized at midnight tonight</p>
+                    ))}
+                  </div>
                 </div>
               </div>
+
+              {/* Right Column: Mini aggregates & highlights */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* Aggregate details block */}
+                <div className="bg-white border border-zinc-200 rounded-3xl p-5.5 shadow-sm space-y-4">
+                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-450">Financial indicators</h4>
+                  <div className="space-y-3.5">
+                    {earningsSummaryCards.map((item) => (
+                      <div key={item.label} className="border-b border-zinc-100 pb-3 last:border-b-0 last:pb-0">
+                        <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide">{item.label}</span>
+                        <p className="text-xl font-black text-zinc-950 mt-0.5">{item.value}</p>
+                        <p className="text-[10.5px] text-zinc-550 font-semibold leading-none mt-1">{item.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Instant payout action banner */}
+                <div className="bg-zinc-950 text-white rounded-3xl p-5 shadow-md flex flex-col space-y-3">
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-450 uppercase">DAILY ACCRUED PAYOUT</span>
+                  <div className="flex items-end justify-between">
+                    <span className="text-2xl font-black tracking-tight text-white">{stats.todayEarnings}</span>
+                    <button className="px-3.5 py-1.5 bg-white text-black hover:bg-zinc-100 rounded-full font-bold text-[10.5px] active:scale-97 transition-all shadow-xs shrink-0 cursor-pointer">
+                      Instant Cashout
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 font-semibold leading-normal pt-1.5 border-t border-zinc-800">
+                    Shift payouts are settled into your bank account daily at midnight.
+                  </p>
+                </div>
+
+              </div>
+
             </div>
           </div>
         )}
+
       </div>
 
-      {/* Sync loading overlay */}
+      {/* Sync/loading overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-3xs z-50 flex items-center justify-center min-h-[500px]">
-          <div className="flex flex-col items-center space-y-3 p-6 bg-white/95 border border-zinc-200 shadow-xl rounded-3xl">
-            <Loader2 className="w-8 h-8 text-zinc-950 animate-spin stroke-[1.5]" />
-            <span className="text-[10px] font-mono font-black text-zinc-550 uppercase tracking-widest">Syncing Operator Console...</span>
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-3xs z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-3.5 p-7 bg-white/95 border border-zinc-200/60 shadow-2xl rounded-3xl animate-fade-in">
+            <Loader2 className="w-8 h-8 text-zinc-950 animate-spin" />
+            <span className="text-[10px] font-mono font-black text-zinc-500 uppercase tracking-widest">Syncing Operator Console...</span>
           </div>
         </div>
       )}

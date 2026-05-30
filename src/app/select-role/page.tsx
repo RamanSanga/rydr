@@ -3,20 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Car, Key, Loader2, ArrowRight } from "lucide-react";
+import { Car, Key, Building2, Loader2, ArrowRight, Check } from "lucide-react";
 import { selectUserRole } from "@/actions/role";
 
 type RydrRole = "rider" | "driver";
 
 interface RoleOption {
   id: RydrRole;
+  eyebrow: string;
   title: string;
-  subtitle: string;
   description: string;
   icon: typeof Car;
   color: string;
-  bg: string;
-  border: string;
+  badge: string;
 }
 
 export default function RoleSelectionPage() {
@@ -28,29 +27,27 @@ export default function RoleSelectionPage() {
   const roleOptions: RoleOption[] = [
     {
       id: "rider",
-      title: "Rider",
-      subtitle: "I need a ride",
+      eyebrow: "PASSENGER PROFILE",
+      title: "Rider Account",
       description: "Book premium commutes, pre-cool cabins, lock upfront price guarantees, and save locations for instant journeys.",
       icon: Car,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      border: "border-emerald-100",
+      color: "hover:border-blue-500 hover:shadow-blue-50/50",
+      badge: "Passenger Hub",
     },
     {
       id: "driver",
-      title: "Driver",
-      subtitle: "I want to drive",
+      eyebrow: "OPERATOR CONSOLE",
+      title: "Driver Portal",
       description: "Go online in seconds, accept incoming dispatches, track completed trips, and manage real-time cash payouts.",
       icon: Key,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
+      color: "hover:border-amber-500 hover:shadow-amber-50/50",
+      badge: "Driver Console",
     },
   ];
 
   const stepsText = [
-    "Authenticating with secure vaults...",
-    "Provisioning your RYDR credentials...",
+    "Authenticating with Clerk secure vaults...",
+    "Provisioning your Rydr publicMetadata claim...",
     "Setting up your custom cloud workspace...",
     "Preparing your brand new dashboard...",
   ];
@@ -60,6 +57,7 @@ export default function RoleSelectionPage() {
     setIsSubmitting(true);
     setLoadingStep(0);
 
+    // Simulate onboarding preparation step animations
     const interval = setInterval(() => {
       setLoadingStep((prev) => {
         if (prev >= stepsText.length - 1) {
@@ -71,7 +69,10 @@ export default function RoleSelectionPage() {
     }, 700);
 
     try {
+      // Trigger Clerk metadata write action
       await selectUserRole(role);
+      
+      // Perform redirect
       setTimeout(() => {
         router.push("/dashboard");
       }, 2900);
@@ -83,70 +84,76 @@ export default function RoleSelectionPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-white text-zinc-900 antialiased flex items-center justify-center py-12 px-6">
-      {/* Decorative gradient background blur */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-80 bg-emerald-500/[0.02] rounded-full blur-3xl pointer-events-none" />
+    <main className="relative min-h-screen bg-[#F8F8F8] text-[#111111] antialiased flex flex-col justify-center py-12 px-6">
+      <div className="absolute inset-0 premium-grid-fine opacity-[0.06] pointer-events-none" />
 
-      <div className="max-w-2xl w-full mx-auto space-y-10 relative z-10">
+      <div className="max-w-[1200px] w-full mx-auto space-y-10 relative z-10">
         
-        {/* Header */}
-        <div className="text-center space-y-3 max-w-xl mx-auto">
-          <span className="eyebrow block">WELCOME TO RYDR</span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 leading-tight">
-            How would you like to use RYDR?
+        {/* Typographic Header */}
+        <div className="text-center space-y-3.5 max-w-xl mx-auto">
+          <span className="text-[10px] font-mono tracking-[0.35em] text-amber-600 font-extrabold uppercase leading-none">
+            WORKSPACE PROVISIONER
+          </span>
+          <h1 className="text-3xl md:text-4.5xl font-black tracking-tighter text-zinc-900 leading-tight">
+            Choose your Rydr Profile.
           </h1>
-          <p className="text-zinc-500 text-sm sm:text-base leading-relaxed">
-            Select your profile below to configure your custom dashboard workspace.
+          <p className="text-zinc-500 text-sm font-semibold leading-relaxed">
+            Select your account type to configure your workspace. You can invite team members or book trips instantly upon selection.
           </p>
         </div>
 
-        {/* 2 Role cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
+        {/* Option cards grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {roleOptions.map((option) => {
             const Icon = option.icon;
             return (
-              <div
+              <motion.div
                 key={option.id}
+                whileHover={{ scale: 1.015, y: -2 }}
+                whileTap={{ scale: 0.99 }}
                 onClick={() => !isSubmitting && handleSelectRole(option.id)}
-                className={`bg-white border border-zinc-200 rounded-3xl p-6 sm:p-7 flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md hover:border-zinc-350 hover-lift group ${
+                className={`bg-white border border-zinc-200 rounded-3xl p-6 md:p-8 flex flex-col justify-between cursor-pointer transition-all duration-200 shadow-3xs group ${option.color} ${
                   isSubmitting ? "pointer-events-none opacity-60" : ""
                 }`}
               >
                 <div className="space-y-6">
                   {/* Icon Card header */}
                   <div className="flex items-center justify-between">
-                    <div className={`w-12 h-12 rounded-2xl ${option.bg} border ${option.border} flex items-center justify-center shadow-3xs`}>
-                      <Icon className={`w-5 h-5 ${option.color}`} />
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-center text-zinc-950 shadow-3xs group-hover:bg-black group-hover:text-white transition-colors duration-250">
+                      <Icon className="w-5 h-5 stroke-[1.75]" />
                     </div>
-                    <span className="text-[10px] font-bold text-zinc-450 bg-zinc-50 border border-zinc-200 px-3 py-1 rounded-full shadow-3xs">
-                      {option.title}
+                    <span className="text-[9px] font-mono font-bold bg-zinc-50 text-zinc-650 border border-zinc-200 px-2.5 py-0.5 rounded-full shadow-3xs">
+                      {option.badge}
                     </span>
                   </div>
 
                   {/* Body Content */}
-                  <div className="space-y-1.5">
-                    <h3 className="text-lg font-bold text-zinc-900 tracking-tight leading-none group-hover:text-emerald-700 transition-colors">
-                      {option.subtitle}
+                  <div className="space-y-2">
+                    <span className="text-[8.5px] font-mono font-extrabold text-zinc-400 tracking-widest block uppercase">
+                      {option.eyebrow}
+                    </span>
+                    <h3 className="text-lg font-black text-zinc-900 tracking-tight leading-none">
+                      {option.title}
                     </h3>
-                    <p className="text-xs sm:text-sm text-zinc-500 leading-relaxed font-semibold">
+                    <p className="text-xs font-semibold text-zinc-500 leading-normal pt-1.5">
                       {option.description}
                     </p>
                   </div>
                 </div>
 
                 {/* Bottom CTA Arrow */}
-                <div className="mt-8 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs font-bold text-zinc-400 group-hover:text-zinc-900 transition-colors">
-                  <span>Enter Profile</span>
+                <div className="mt-8 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs font-bold text-zinc-400 group-hover:text-black transition-colors">
+                  <span>Enter Workspace</span>
                   <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
 
       </div>
 
-      {/* Submission Loader Screen */}
+      {/* Modern Fullscreen Submission Backdrop Loader */}
       <AnimatePresence>
         {isSubmitting && (
           <motion.div
@@ -156,27 +163,27 @@ export default function RoleSelectionPage() {
             className="fixed inset-0 z-50 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-6"
           >
             <div className="relative flex items-center justify-center">
-              <Loader2 className="w-12 h-12 text-zinc-800 animate-spin stroke-[1.5]" />
-              <div className="absolute text-[10px] font-bold text-zinc-500 font-mono">
+              <Loader2 className="w-14 h-14 text-zinc-800 animate-spin stroke-[1.5]" />
+              <div className="absolute text-[11px] font-bold text-zinc-600 font-mono">
                 {loadingStep + 1}
               </div>
             </div>
             
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold tracking-widest text-emerald-600 uppercase block">
+              <span className="text-[8.5px] font-mono tracking-widest text-amber-600 font-extrabold uppercase">
                 PROVISIONING WORKSPACE
               </span>
               <h4 className="text-base font-extrabold text-zinc-950">
-                Setting up your {selectedRole === "rider" ? "Rider Dashboard" : "Driver Portal"}...
+                Setting up your {selectedRole === "rider" ? "Rider Profile" : selectedRole === "driver" ? "Driver Portal" : "Enterprise Console"}...
               </h4>
-              <p className="text-xs text-zinc-400 font-mono h-4">
+              <p className="text-xs text-zinc-500 font-mono h-4">
                 {stepsText[loadingStep]}
               </p>
             </div>
 
-            <div className="w-full max-w-[200px] bg-zinc-100 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full max-w-[220px] bg-zinc-100 h-[3px] rounded-full overflow-hidden">
               <motion.div
-                className="bg-zinc-900 h-full"
+                className="bg-black h-full"
                 initial={{ width: "0%" }}
                 animate={{ width: `${(loadingStep + 1) * 25}%` }}
                 transition={{ duration: 0.7, ease: "easeInOut" }}

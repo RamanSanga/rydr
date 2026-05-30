@@ -11,11 +11,57 @@ model User {
   id             String          @id // Storing Clerk User ID directly as primary key
   name           String
   email          String          @unique
-  role           String          // "rider" | "driver" | "business"
+  role           String          // "rider" | "driver" | "business" | "admin"
   rides          Ride[]          @relation("RiderRides")
   driverRides    Ride[]          @relation("DriverRides")
   savedLocations SavedLocation[]
   driverLocation DriverLocation?
+  riderProfile   RiderProfile?
+  driverProfile  DriverProfile?
+}
+
+model RiderProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  phone             String?
+  dob               String?
+  emergencyName     String?
+  emergencyRelation String?
+  emergencyPhone    String?
+  quietRide         Boolean  @default(false)
+  acPreference      String?  // "AC" | "Non-AC" | "No Preference"
+  language          String?
+  aadhaarUrl        String?
+  selfieUrl         String?
+  onboarded         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model DriverProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id])
+  phone              String?
+  address            String?
+  aadhaarUrl         String?
+  panUrl             String?
+  selfieUrl          String?
+  licenseUrl         String?
+  licenseNumber      String?
+  licenseExpiry      String?
+  vehicleType        String?  // "economy" | "premium" | "xl"
+  vehicleModel       String?
+  vehicleNumber      String?
+  rcUrl              String?
+  insuranceUrl       String?
+  permitUrl          String?
+  verificationStatus String   @default("Pending") // "Pending" | "Under Review" | "Approved" | "Rejected"
+  rejectionReason    String?
+  onboarded          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Ride {

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Navbar from "@/components/Navbar";
 import { Ride, getRouteDistance, calculateFare } from "@/lib/data";
 import { fetchUserRides } from "@/actions/ride";
-import { Search, MapPin, Clock, ArrowRight, ArrowLeft } from "lucide-react";
+import { Search, MapPin, Calendar, Clock, Star, ChevronRight, HelpCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import Footer from "@/components/Footer";
 
 type RideFilter = "All" | "Requested" | "Accepted" | "On Trip" | "Completed" | "Cancelled";
 
@@ -15,34 +15,38 @@ export default function RidesHistoryPage() {
   const [localRides, setLocalRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadRides = async () => {
-    try {
-      const dbRides = await fetchUserRides();
-      
-      const formattedRides: Ride[] = dbRides.map((r: any) => ({
-        id: r.id,
-        date: new Date(r.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }),
-        time: new Date(r.createdAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),
-        pickup: r.pickup,
-        destination: r.destination,
-        price: r.fare ? "₹" + r.fare : "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
-        driverName: r.driver?.name || "Vetted Driver Partner",
-        driverInitials: r.driver?.name ? r.driver.name.substring(0, 2).toUpperCase() : "VD",
-        vehicle: "RYDR Clean Cabin",
-        status: r.status as any,
-        tier: r.rideType === "economy" ? "Economy" : r.rideType === "premium" ? "Premium" : "XL",
-      }));
-
-      setLocalRides(formattedRides);
-    } catch (err) {
-      console.error("Error loading rides history:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    async function loadRides() {
+      try {
+        const dbRides = await fetchUserRides();
+        
+        // Map raw DB logs to the high-fidelity UI format
+        const formattedRides: Ride[] = dbRides.map((r: any) => ({
+          id: r.id,
+          date: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+          pickup: r.pickup,
+          destination: r.destination,
+          price: r.fare ? "₹" + r.fare : "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
+          driverName: r.driver?.name || "Unassigned",
+          driverInitials: r.driver?.name ? r.driver.name.substring(0, 2).toUpperCase() : "??",
+          vehicle: "Swift Dzire (White)", // We can make this dynamic if we add vehicle to DB later
+          status: r.status as any,
+          tier: r.rideType === "economy" ? "Economy" : r.rideType === "premium" ? "Premium" : "XL",
+        }));
+
+        setLocalRides(formattedRides);
+      } catch (err) {
+        console.error("Error loading rides history:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    // Initial load
     loadRides();
+
+    // Poll every 10 seconds for real-time status updates
     const interval = setInterval(loadRides, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -59,71 +63,97 @@ export default function RidesHistoryPage() {
   const filterTabs: RideFilter[] = ["All", "Requested", "Accepted", "On Trip", "Completed"];
 
   const statusColors = {
-    Requested: "bg-amber-50 text-amber-700 border-amber-100",
-    Accepted: "bg-blue-50 text-blue-700 border-blue-100",
-    "Driver Arriving": "bg-indigo-50 text-indigo-700 border-indigo-100",
-    "On Trip": "bg-emerald-50 text-emerald-700 border-emerald-100",
-    Completed: "bg-zinc-150 text-zinc-700 border-zinc-200",
-    Cancelled: "bg-red-50 text-red-700 border-red-100",
+    Requested: "bg-amber-50 text-amber-700 border-amber-200/60",
+    Accepted: "bg-blue-50 text-blue-700 border-blue-200/60",
+    "Driver Arriving": "bg-indigo-50 text-indigo-700 border-indigo-200/60",
+    "On Trip": "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+    Completed: "bg-zinc-100 text-zinc-700 border-zinc-200/60",
+    Cancelled: "bg-red-50 text-red-700 border-red-200/60",
   } as Record<string, string>;
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 flex flex-col pt-8 sm:pt-12">
-      <main className="flex-1 max-w-2xl w-full mx-auto px-5 sm:px-6 space-y-8 pb-20">
+    <main className="relative min-h-screen bg-[#F8F8F8] text-[#111111] antialiased pb-24 md:pb-12 pt-28">
+      {/* Rider Navbar */}
+      <Navbar />
+
+      <div className="max-w-[1000px] mx-auto px-6 space-y-8">
         
-        {/* Title and Search */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4">
-          <div className="space-y-1">
-            <span className="eyebrow block">TRIP JOURNAL</span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900">
+        {/* Page Title & Search Bar */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-mono tracking-widest text-amber-600 font-bold uppercase">
+              TRIP JOURNAL
+            </span>
+            <h1 className="text-3xl font-black tracking-tighter text-zinc-900 leading-none">
               My Rides
             </h1>
+            <p className="text-zinc-500 text-sm font-semibold">
+              Explore your ride history, scheduled trips, and spontaneous outings.
+            </p>
           </div>
 
-          {/* Search bar */}
-          <div className="relative max-w-xs w-full">
+          {/* Search Input Box */}
+          <div className="relative bg-white border border-zinc-200 rounded-xl px-4 py-2.5 flex items-center space-x-2.5 max-w-sm w-full focus-within:border-zinc-400 transition-colors shadow-3xs">
+            <Search className="w-4 h-4 text-zinc-455 shrink-0" />
             <input
               type="text"
-              placeholder="Search destination, driver..."
+              placeholder="Search by driver, stop..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-xs placeholder-zinc-400 focus:outline-none focus:border-zinc-350 focus:bg-white transition-all shadow-3xs"
+              className="bg-transparent border-0 outline-0 p-0 text-sm text-zinc-900 placeholder-zinc-455 focus:ring-0 font-medium w-full"
             />
           </div>
         </div>
 
-        {/* Tab Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0">
-          <div className="flex bg-zinc-100 p-1 border border-zinc-200 rounded-xl w-fit">
-            {filterTabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveFilter(tab)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  activeFilter === tab 
-                    ? "bg-white text-zinc-900 shadow-3xs"
-                    : "text-zinc-500 hover:text-zinc-900"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+        {/* Tab Filters segmented controls */}
+        <div className="flex space-x-1.5 bg-zinc-150 p-1.5 rounded-xl border border-zinc-200 self-start md:self-auto max-w-max">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveFilter(tab)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeFilter === tab 
+                  ? "bg-white text-black shadow-3xs"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        {/* Rides List */}
-        <div className="space-y-4">
+        {/* Rides List Showcase */}
+        <div className="space-y-5">
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2].map((n) => (
-                <div key={n} className="bg-white border border-zinc-200 rounded-2xl p-5 space-y-4 animate-pulse">
+            <div className="space-y-5">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="bg-white border border-zinc-200 rounded-3xl p-5 md:p-6.5 shadow-3xs space-y-4 animate-pulse">
                   <div className="flex justify-between items-center">
-                    <div className="w-1/3 h-4 bg-zinc-100 rounded" />
-                    <div className="w-12 h-4 bg-zinc-100 rounded" />
+                    <div className="flex items-center space-x-3">
+                      <div className="w-16 h-5 bg-zinc-100 rounded-full" />
+                      <div className="w-28 h-3 bg-zinc-100 rounded-md" />
+                    </div>
+                    <div className="text-right space-y-1">
+                      <div className="w-12 h-4 bg-zinc-100 rounded-md ml-auto" />
+                      <div className="w-16 h-2.5 bg-zinc-100 rounded-md ml-auto" />
+                    </div>
                   </div>
                   <div className="h-[1px] bg-zinc-100" />
-                  <div className="w-2/3 h-3 bg-zinc-100 rounded" />
-                  <div className="w-1/2 h-3 bg-zinc-100 rounded" />
+                  <div className="space-y-3.5 pl-5 py-1">
+                    <div className="w-1/2 h-3.5 bg-zinc-100 rounded-md" />
+                    <div className="w-2/3 h-3.5 bg-zinc-100 rounded-md" />
+                  </div>
+                  <div className="h-[1px] bg-zinc-100" />
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-zinc-100" />
+                      <div className="space-y-1.5">
+                        <div className="w-24 h-3 bg-zinc-100 rounded-md" />
+                        <div className="w-20 h-2 bg-zinc-100 rounded-md" />
+                      </div>
+                    </div>
+                    <div className="w-24 h-8 bg-zinc-100 rounded-xl" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -131,95 +161,104 @@ export default function RidesHistoryPage() {
             filteredRides.map((ride) => (
               <div
                 key={ride.id}
-                className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm hover:border-zinc-300 hover:shadow-md transition-all space-y-4"
+                className="bg-white border border-zinc-200 rounded-3xl p-5 md:p-6.5 shadow-3xs hover:border-zinc-350 hover:shadow-2xs transition-all duration-200 space-y-4"
               >
+                
                 {/* Header: Status, Date, Fare */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-3xs ${statusColors[ride.status] || "bg-zinc-100"}`}>
+                  <div className="flex items-center space-x-3">
+                    <span className={`text-[10px] font-mono font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-3xs ${statusColors[ride.status]}`}>
                       {ride.status}
                     </span>
-                    <span className="text-[10px] sm:text-xs text-zinc-400 font-semibold">{ride.date} • {ride.time}</span>
+                    <span className="text-[12.5px] font-mono font-bold text-zinc-400">{ride.date} • {ride.time}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-base font-extrabold text-zinc-950 block leading-none">{ride.price}</span>
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase block mt-1 tracking-wider">{ride.tier}</span>
+                    <span className="text-[16px] font-black text-zinc-950 block">{ride.price}</span>
+                    <span className="text-[9.5px] font-mono text-zinc-400 font-bold uppercase block mt-0.5">{ride.tier} Tier</span>
                   </div>
                 </div>
 
-                <div className="h-[1px] bg-zinc-100" />
+                {/* Separator line */}
+                <div className="h-[1px] bg-zinc-150" />
 
-                {/* Timeline stops */}
-                <div className="relative space-y-3.5 pl-5 ml-1 select-none">
-                  {/* Connecting Line */}
+                {/* Route stops with vertical connecting dotted line */}
+                <div className="relative space-y-4.5 pl-5 ml-1 select-none py-1">
+                  {/* Dotted Line */}
                   <div className="absolute left-[3.5px] top-3.5 bottom-3.5 w-[1.5px] border-dashed border-l border-zinc-250 pointer-events-none" />
 
                   {/* Pickup */}
-                  <div className="relative leading-none">
+                  <div className="relative">
                     <div className="absolute -left-[24px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow-3xs" />
-                    <span className="text-[8px] font-bold text-zinc-400 block uppercase tracking-wider">Pickup</span>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 mt-1 leading-snug truncate">{ride.pickup}</p>
+                    <span className="text-[9px] font-mono font-bold text-zinc-400 block uppercase tracking-wider leading-none">Pickup Location</span>
+                    <p className="text-[13px] font-extrabold text-zinc-800 mt-1 leading-tight">{ride.pickup}</p>
                   </div>
 
                   {/* Destination */}
-                  <div className="relative leading-none">
+                  <div className="relative">
                     <div className="absolute -left-[24px] top-1 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white shadow-3xs" />
-                    <span className="text-[8px] font-bold text-zinc-400 block uppercase tracking-wider">Destination</span>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 mt-1 leading-snug truncate">{ride.destination}</p>
+                    <span className="text-[9px] font-mono font-bold text-zinc-400 block uppercase tracking-wider leading-none">Destination Location</span>
+                    <p className="text-[13px] font-extrabold text-zinc-800 mt-1 leading-tight">{ride.destination}</p>
                   </div>
                 </div>
 
-                {/* Driver information */}
-                <div className="flex items-center justify-between pt-4 border-t border-zinc-100 mt-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-zinc-900 text-white text-[10px] font-extrabold flex items-center justify-center shrink-0">
+                {/* Separator line */}
+                <div className="h-[1px] bg-zinc-150" />
+
+                {/* Driver information & Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-10 h-10 rounded-full bg-zinc-50 border border-zinc-200 flex items-center justify-center font-black text-xs text-zinc-800 shadow-3xs">
                       {ride.driverInitials}
                     </div>
                     <div>
-                      <span className="text-xs font-bold text-zinc-800 block leading-tight">{ride.driverName}</span>
-                      <span className="text-[10px] text-zinc-400 font-semibold">{ride.vehicle}</span>
+                      <h5 className="text-[13px] font-extrabold text-zinc-900 leading-tight">
+                        {ride.driverName}
+                      </h5>
+                      <span className="text-[10px] text-zinc-450 font-semibold mt-0.5 block">
+                        {ride.vehicle}
+                      </span>
                     </div>
                   </div>
 
-                  <Link
-                    href={`/rider?rideId=${ride.id}`}
-                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Track Trip</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  {/* Action buttons */}
+                  <div className="flex items-center space-x-3">
+                    <button className="px-4 py-2 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 text-xs font-bold border border-zinc-200 rounded-xl transition-colors cursor-pointer shadow-3xs flex items-center space-x-1.5">
+                      <HelpCircle className="w-3.5 h-3.5 text-zinc-450" />
+                      <span>Get Help</span>
+                    </button>
+                    {ride.status === "Completed" && (
+                      <button className="px-4 py-2 bg-black text-white hover:bg-zinc-800 text-xs font-bold rounded-xl active:scale-97 transition-all cursor-pointer shadow-3xs flex items-center space-x-1.5">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Book Again</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
+
               </div>
             ))
           ) : (
-            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-3">
-              <div className="p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-400">
-                <Clock className="w-5 h-5" />
+            <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center shadow-3xs flex flex-col items-center justify-center space-y-4.5">
+              <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 shadow-3xs">
+                <Calendar className="w-6 h-6 stroke-[1.5]" />
               </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-zinc-950">No rides found</h4>
-                <p className="text-xs text-zinc-500 font-semibold max-w-[200px] mx-auto leading-normal">
-                  Try adjusting your search queries or selecting a different filter tab.
+              <div className="space-y-1.5">
+                <h4 className="text-base font-extrabold text-zinc-900 tracking-tight">No rides found</h4>
+                <p className="text-xs text-zinc-500 max-w-[280px] mx-auto font-medium leading-normal">
+                  We couldn't find any trips matching your search query or selected filter tab.
                 </p>
               </div>
+              <Link
+                href="/rider"
+                className="px-5 py-2.5 bg-black text-white hover:bg-zinc-800 text-xs font-bold rounded-xl active:scale-97 transition-all cursor-pointer shadow-3xs"
+              >
+                Book Your First Ride
+              </Link>
             </div>
           )}
         </div>
 
-        {/* Back Link */}
-        <div className="pt-4 text-center">
-          <Link
-            href="/rider"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </main>
   );
 }

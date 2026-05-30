@@ -1,85 +1,136 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Smartphone, ShieldCheck, Smile } from "lucide-react";
 
 export default function HowRydrWorks() {
   const steps = [
     {
-      step: "01",
-      title: "Book",
-      description: "Enter your destination, review fare options, and book with one click.",
+      number: "01",
+      title: "Tell us where to.",
+      description: "Enter your destination and choose the vehicle that fits your plan. You'll see your exact upfront fare locked in immediately.",
       icon: Smartphone,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
+      iconColor: "text-[#B45309]",
+      badgeColor: "bg-amber-100/60 text-[#B45309] border-amber-200/50",
     },
     {
-      step: "02",
-      title: "Match",
-      description: "We pair you instantly with a nearby background-checked driver.",
+      number: "02",
+      title: "Meet your driver.",
+      description: "We pair you instantly with a friendly, background-checked local driver. You can track their arrival live on the map.",
       icon: ShieldCheck,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      iconColor: "text-[#1D4ED8]",
+      badgeColor: "bg-blue-100/60 text-[#1D4ED8] border-blue-200/50",
     },
     {
-      step: "03",
-      title: "Ride",
-      description: "Sink into a clean, air-conditioned cabin and enjoy a safe journey.",
+      number: "03",
+      title: "Enjoy the drive.",
+      description: "Sink into a comfortable, air-conditioned cabin and enjoy a peaceful ride. Settle cashless and walk out automatically.",
       icon: Smile,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
+      iconColor: "text-[#15803D]",
+      badgeColor: "bg-green-100/60 text-[#15803D] border-green-200/50",
     },
   ];
 
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const stepVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" },
+    },
+  } as const;
+
   return (
-    <section className="bg-white py-16 sm:py-24 relative overflow-hidden">
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 relative z-10 space-y-12 sm:space-y-16">
+    <section id="how-it-works" className="bg-[#F8F8F8] py-32 border-t border-zinc-200 relative overflow-hidden">
+      <div className="max-w-[1400px] mx-auto px-6 relative z-10 space-y-16">
         
         {/* Section Header */}
-        <div className="text-center max-w-xl mx-auto space-y-3">
-          <span className="eyebrow">How It Works</span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 leading-tight">
-            Perfect rides in three steps
+        <div className="text-center max-w-xl mx-auto space-y-4">
+          <span className="text-[10px] font-mono tracking-widest text-amber-600 font-bold uppercase">
+            Simple Rides
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-zinc-900 leading-tight">
+            Roadmap of a perfect ride
           </h2>
-          <p className="text-zinc-500 text-sm sm:text-base leading-relaxed">
-            Three simple steps designed to connect you safely with friendly, professional drivers in seconds.
+          <p className="text-zinc-500 text-sm leading-normal font-semibold">
+            Three simple steps connecting you with safe, professional, and friendly local drivers.
           </p>
         </div>
 
-        {/* Steps Horizontal Cards on Desktop / Vertical Stack on Mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12 relative">
+        {/* Steps Grid Container */}
+        <div className="relative">
           
-          {/* Subtle connector line on desktop */}
-          <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-zinc-200 -translate-y-1/2 hidden md:block z-0" />
+          {/* Continuous Winding Dotted Street Path (Desktop only) */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-20 pointer-events-none hidden md:block z-0 px-24">
+            <svg className="w-full h-full text-zinc-200" fill="none" viewBox="0 0 1000 80">
+              {/* Road Casing */}
+              <path
+                d="M 50 40 C 200 40, 250 10, 450 10 C 650 10, 700 70, 950 70"
+                stroke="#E4E4E7"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray="8 8"
+              />
+              {/* Pulsing Active Route Path */}
+              <motion.path
+                d="M 50 40 C 200 40, 250 10, 450 10 C 650 10, 700 70, 950 70"
+                stroke="#B45309"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray="8 8"
+                animate={{ strokeDashoffset: [-48, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                opacity="0.35"
+              />
+            </svg>
+          </div>
 
-          {steps.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div 
+          {/* Seamless Step Cards (No bordered white containers) */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10"
+          >
+            {steps.map((step, idx) => (
+              <motion.div
                 key={idx}
-                className="bg-white border border-zinc-150 rounded-2xl p-6 sm:p-7 shadow-sm hover:shadow-md hover-lift transition-all relative z-10 flex flex-col items-center text-center space-y-4"
+                variants={stepVariants}
+                className="space-y-5 flex flex-col items-start relative group"
               >
-                {/* Step badge and icon */}
-                <div className="relative">
-                  <div className={`h-14 w-14 rounded-full ${item.bg} flex items-center justify-center relative shadow-sm border border-zinc-100`}>
-                    <Icon className={`w-6 h-6 ${item.color}`} />
-                  </div>
-                  <span className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-zinc-900 text-white text-[10px] font-bold flex items-center justify-center font-mono">
-                    {item.step}
+                {/* Step number and icon wrapper */}
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-5xl font-black text-zinc-300 group-hover:text-zinc-400 transition-colors font-mono tracking-tight leading-none select-none">
+                    {step.number}
                   </span>
+                  <div className={`p-3 bg-white border border-zinc-200 rounded-2xl ${step.iconColor} shadow-md transition-transform duration-200 group-hover:scale-105`}>
+                    <step.icon className="w-5 h-5" />
+                  </div>
                 </div>
 
-                {/* Text Content */}
+                {/* Step description */}
                 <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-zinc-900">
-                    {item.title}
-                  </h3>
-                  <p className="text-zinc-550 text-xs sm:text-sm leading-relaxed max-w-[240px]">
-                    {item.description}
+                  <h4 className="text-lg font-black text-zinc-900 tracking-tight">
+                    {step.title}
+                  </h4>
+                  <p className="text-[13.5px] text-zinc-550 leading-relaxed font-semibold">
+                    {step.description}
                   </p>
                 </div>
-              </div>
-            );
-          })}
+              </motion.div>
+            ))}
+          </motion.div>
+
         </div>
       </div>
     </section>
