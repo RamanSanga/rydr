@@ -118,10 +118,10 @@ export async function createRideAction(pickup: string, destination: string, ride
   let status = "Requested";
   
   if (pickupLat && pickupLng) {
-    const nearbyDrivers = await getNearbyDrivers(pickupLat, pickupLng);
-    if (nearbyDrivers.length > 0) {
+    const response = await getNearbyDrivers(pickupLat, pickupLng);
+    if (response.drivers && response.drivers.length > 0) {
       // Assign the closest one
-      assignedDriverId = nearbyDrivers[0].userId;
+      assignedDriverId = response.drivers[0].userId;
     }
   }
 

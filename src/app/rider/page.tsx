@@ -112,8 +112,8 @@ export default function RiderDashboard() {
     const fetchDrivers = async () => {
       if (pickupCoords) {
         try {
-          const drivers = await getNearbyDrivers(pickupCoords[1], pickupCoords[0]); // pass lat, lng
-          setNearbyDrivers(drivers);
+          const response = await getNearbyDrivers(pickupCoords[1], pickupCoords[0]); // pass lat, lng
+          setNearbyDrivers(response.drivers);
         } catch (err) {
           console.error("Failed to fetch nearby drivers", err);
         }

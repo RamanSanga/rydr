@@ -212,6 +212,12 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
   const [availability, setAvailability] = useState<DriverAvailability>("Online");
   const [loading, setLoading] = useState(true);
 
+  // Temporary Debug State
+  const [debugLat, setDebugLat] = useState<number | null>(null);
+  const [debugLng, setDebugLng] = useState<number | null>(null);
+  const [debugLastUpdated, setDebugLastUpdated] = useState<string | null>(null);
+
+
   // Reactive operational queues loaded from PostgreSQL DB actions
   const [requests, setRequests] = useState<any[]>([]);
   const [accepted, setAccepted] = useState<any[]>([]);
@@ -307,6 +313,9 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             try {
+              setDebugLat(position.coords.latitude);
+              setDebugLng(position.coords.longitude);
+              setDebugLastUpdated(new Date().toLocaleTimeString());
               await updateDriverLocation(
                 position.coords.latitude,
                 position.coords.longitude,
@@ -429,6 +438,15 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                 <StatCard label="Driver Profile" value={stats.driverRating} detail="Top Rated Operator" icon={UserCircle2} />
               </div>
             </section>
+
+            {/* TEMPORARY DEBUG UI */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm mb-6 text-xs text-red-900 font-mono">
+              <h3 className="font-bold mb-2 uppercase text-red-700">Driver Debug Info</h3>
+              <p>Current Latitude: {debugLat ?? "Detecting..."}</p>
+              <p>Current Longitude: {debugLng ?? "Detecting..."}</p>
+              <p>Online Status: <span className="font-bold">{availability}</span></p>
+              <p>Last Updated Time: {debugLastUpdated ?? "N/A"}</p>
+            </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
               {/* Requests Queue column */}

@@ -59,6 +59,10 @@ export default function RideBookingCard({
   const [loadingStep, setLoadingStep] = useState(0);
   const [foundDriver, setFoundDriver] = useState<any | null>(null);
 
+  // Temporary Debug State
+  const [debugSearchMeta, setDebugSearchMeta] = useState<any>(null);
+  const [debugNoDriverReason, setDebugNoDriverReason] = useState<string | null>(null);
+
   // Local fallback states if props are omitted:
   const [localPickup, setLocalPickup] = useState("");
   const [localDestination, setLocalDestination] = useState("");
@@ -412,10 +416,15 @@ export default function RideBookingCard({
     }, 1500);
 
     let nearbyDrivers: any[] = [];
+    let meta: any = null;
     try {
-      nearbyDrivers = await getNearbyDrivers(start[1], start[0]);
+      const response = await getNearbyDrivers(start[1], start[0]);
+      nearbyDrivers = response.drivers;
+      meta = response;
+      setDebugSearchMeta(response);
     } catch (err) {
       console.error(err);
+      setDebugNoDriverReason("API Error or Server Exception");
     }
 
     const waitTime = nearbyDrivers.length > 0 ? 4500 : 15000;
@@ -427,6 +436,11 @@ export default function RideBookingCard({
         setBookingState("driverFound");
       } else {
         setBookingState("noDriverFound");
+        if (meta) {
+          if (meta.totalOnline === 0) setDebugNoDriverReason("No online drivers exist in database.");
+          else if (meta.totalOnline > 0 && meta.totalWithinRadius === 0) setDebugNoDriverReason(`Drivers exist (${meta.totalOnline}), but none within ${meta.radius}km radius.`);
+          else setDebugNoDriverReason("Unknown matching issue.");
+        }
       }
     }, waitTime);
   };
@@ -474,6 +488,16 @@ export default function RideBookingCard({
           >
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-[16px] font-bold text-zinc-900 tracking-tight">Book a Ride</h3>
+            </div>
+
+            {/* TEMPORARY RIDER DEBUG UI */}
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm mb-6 text-[10px] text-red-900 font-mono">
+              <h3 className="font-bold mb-2 uppercase text-red-700">Rider Debug Info</h3>
+              <p>Current Latitude: {pCoords ? pCoords[1].toFixed(5) : "Detecting..."}</p>
+              <p>Current Longitude: {pCoords ? pCoords[0].toFixed(5) : "Detecting..."}</p>
+              <p>Total Online Drivers Found: {debugSearchMeta?.totalOnline ?? "Wait for search..."}</p>
+              <p>Drivers Within Radius: {debugSearchMeta?.totalWithinRadius ?? "Wait for search..."}</p>
+              <p>Radius Used: {debugSearchMeta?.radius ? `${debugSearchMeta.radius} km` : "Wait for search..."}</p>
             </div>
 
             <form onSubmit={triggerSearch} className="space-y-4">
@@ -749,6 +773,7 @@ export default function RideBookingCard({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-zinc-900">{foundDriver.user?.name || "Rohit Kumar"}</h4>
+                  <p className="text-[10px] text-red-600 font-bold mt-0.5 mb-0.5">DEBUG: {foundDriver.distanceKm?.toFixed(2)} km away | Lat {foundDriver.latitude?.toFixed(4)}, Lng {foundDriver.longitude?.toFixed(4)}</p>
                   <div className="flex items-center space-x-2 mt-0.5">
                     <div className="flex items-center space-x-1 text-amber-500">
                       <Star className="w-3 h-3 fill-current" />
@@ -835,29 +860,31 @@ export default function RideBookingCard({
 
         {bookingState === "noDriverFound" && (
           <motion.div
-            key="booking-no-driver"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            className="py-10 flex flex-col items-center justify-center text-center space-y-5"
+            key="booking-no-driver-found"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="flex flex-col items-center justify-center text-center py-10 space-y-4"
           >
-            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center border border-red-100">
-              <XCircle className="w-6 h-6 text-red-500" />
+            <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center text-red-500 mb-2">
+              <XCircle className="w-8 h-8" />
             </div>
-            <div className="space-y-1.5">
-              <h4 className="text-base font-bold text-zinc-900 tracking-tight">No drivers available right now.</h4>
-              <p className="text-xs text-zinc-500 font-semibold max-w-[240px]">
-                Please try again in a few minutes as drivers become online.
+            <div>
+              <h3 className="text-lg font-bold text-zinc-900">No Drivers Found</h3>
+              <p className="text-sm text-zinc-500 mt-1">
+                We couldn't find any available drivers near your location.
               </p>
+              {debugNoDriverReason && (
+                <div className="mt-3 text-xs bg-red-100 text-red-800 border border-red-200 p-2 rounded-lg font-mono">
+                  DEBUG REASON:<br/>{debugNoDriverReason}
+                </div>
+              )}
             </div>
-            
             <button
-              onClick={resetBooking}
-              type="button"
-              className="mt-4 px-6 py-2.5 rounded-full font-bold text-xs bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-colors border border-zinc-200 flex items-center space-x-2"
+              onClick={() => setBookingState("idle")}
+              className="mt-4 px-6 py-2.5 bg-black text-white text-sm font-bold rounded-xl active:scale-95 transition-transform"
             >
-              <Search className="w-3.5 h-3.5" />
-              <span>Search Again</span>
+              Try Again
             </button>
           </motion.div>
         )}

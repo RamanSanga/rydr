@@ -318,7 +318,9 @@ export async function updateDriverLocation(latitude: number, longitude: number, 
 
 // 8. Get Nearby Online Drivers for Rider App
 export async function getNearbyDrivers(lat: number, lng: number) {
-  if (!lat || !lng) return [];
+  if (!lat || !lng) {
+    return { drivers: [], totalOnline: 0, totalWithinRadius: 0, radius: 10, error: "Invalid coordinates" };
+  }
 
   // Fetch all online drivers (in a real app, use PostGIS, but for this demo, fetch all and calculate in memory)
   const onlineDrivers = await prisma.driverLocation.findMany({
@@ -331,7 +333,6 @@ export async function getNearbyDrivers(lat: number, lng: number) {
     },
   });
 
-  // Calculate distance (Haversine formula approximation)
   const R = 6371; // Radius of the earth in km
   const RADIUS_LIMIT_KM = 10;
   
@@ -364,5 +365,13 @@ export async function getNearbyDrivers(lat: number, lng: number) {
   console.log("================================================");
 
   // Sort by closest and limit to top 5
-  return driversWithinRadius.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
+  const sortedDrivers = driversWithinRadius.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
+
+  return {
+    drivers: sortedDrivers,
+    totalOnline: onlineDrivers.length,
+    totalWithinRadius: driversWithinRadius.length,
+    radius: RADIUS_LIMIT_KM,
+    error: null
+  };
 }
