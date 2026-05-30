@@ -3,14 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { Menu, X, Globe, ChevronDown, HelpCircle, Shield, Briefcase, Car, Info } from "lucide-react";
+import { Menu, X, HelpCircle, Shield, Car, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState("EN");
 
   const { isSignedIn, isLoaded } = useUser();
 
@@ -27,11 +25,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: "Ride", href: "#ride", icon: Car },
-    { label: "Drive", href: "#drive", icon: Shield },
-    { label: "Business", href: "#business", icon: Briefcase },
-    { label: "Safety", href: "#safety", icon: Shield },
-    { label: "About", href: "#about", icon: Info },
+    { label: "Ride", href: "/rider", icon: Car },
+    { label: "Drive", href: "/driver", icon: Shield },
+    { label: "Safety", href: "/safety", icon: Shield },
+    { label: "About", href: "/about", icon: Info },
   ];
 
   return (
@@ -65,55 +62,11 @@ export default function Navbar() {
           </nav>
         </div>
 
-        {/* Right Side: Language, Help, Clerk Auth */}
+        {/* Right Side: Help, Clerk Auth */}
         <div className="hidden md:flex items-center space-x-6">
-          {/* Language Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setLangMenuOpen(!langMenuOpen)}
-              className="flex items-center space-x-1 text-zinc-500 hover:text-black transition-colors text-[13px] font-medium cursor-pointer"
-            >
-              <Globe className="w-4 h-4" />
-              <span>{currentLang}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${langMenuOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            <AnimatePresence>
-              {langMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setLangMenuOpen(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-32 bg-white border border-zinc-200 rounded-xl p-1.5 shadow-lg z-20"
-                  >
-                    {["EN", "ES", "FR", "DE"].map((lang) => (
-                      <button
-                        key={lang}
-                        onClick={() => {
-                          setCurrentLang(lang);
-                          setLangMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-[13px] transition-colors ${
-                          currentLang === lang
-                            ? "bg-zinc-100 text-black font-semibold"
-                            : "text-zinc-500 hover:bg-zinc-50 hover:text-black"
-                        }`}
-                      >
-                        {lang === "EN" ? "English" : lang === "ES" ? "Español" : lang === "FR" ? "Français" : "Deutsch"}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-
           {/* Help */}
           <Link
-            href="#help"
+            href="/help"
             className="flex items-center space-x-1 text-zinc-500 hover:text-black transition-colors text-[13px] font-medium"
           >
             <HelpCircle className="w-4 h-4" />
@@ -181,45 +134,25 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              <div className="h-[1px] bg-zinc-200/80 my-3" />
-
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between text-zinc-500">
-                  <span className="text-sm font-semibold">Language</span>
-                  <div className="flex space-x-2">
-                    {["EN", "ES", "FR"].map((l) => (
-                      <button
-                        key={l}
-                        onClick={() => setCurrentLang(l)}
-                        className={`text-xs px-2.5 py-1 rounded-md ${
-                          currentLang === l ? "bg-zinc-100 text-black font-bold" : "hover:text-black"
-                        }`}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {isLoaded && !isSignedIn && (
-                  <>
-                    <Link
-                      href="/sign-in"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="w-full py-2.5 text-center border border-zinc-200 text-black font-semibold text-sm rounded-lg hover:bg-zinc-50 transition-colors"
-                    >
-                      Log in
-                    </Link>
-                    <Link
-                      href="/sign-up"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="w-full py-2.5 text-center bg-black text-white font-semibold text-sm rounded-lg hover:bg-zinc-800 transition-colors"
-                    >
-                      Sign up
-                    </Link>
-                  </>
-                )}
-              </div>
+              {isLoaded && !isSignedIn && (
+                <>
+                  <div className="h-[1px] bg-zinc-200/80 my-3" />
+                  <Link
+                    href="/sign-in"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2.5 text-center border border-zinc-200 text-black font-semibold text-sm rounded-lg hover:bg-zinc-50 transition-colors block"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-2.5 text-center bg-black text-white font-semibold text-sm rounded-lg hover:bg-zinc-800 transition-colors block"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

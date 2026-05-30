@@ -19,7 +19,7 @@ export default function SmartFeatures() {
   const moodsInfo = {
     monsoon: {
       name: "Monsoon Cozy",
-      temp: 72,
+      temp: 22,
       tempLabel: "Warm & Cozy",
       quietLabel: "Friendly driver conversation",
       soundscape: "Soft monsoon rain & lo-fi playlist",
@@ -31,7 +31,7 @@ export default function SmartFeatures() {
     },
     sunset: {
       name: "Sunset Chill",
-      temp: 68,
+      temp: 20,
       tempLabel: "Crisp AC Breeze",
       quietLabel: "Driver will follow your lead",
       soundscape: "Sunroof open & soft roadway jazz",
@@ -43,7 +43,7 @@ export default function SmartFeatures() {
     },
     midnight: {
       name: "Midnight Rest",
-      temp: 66,
+      temp: 19,
       tempLabel: "Crisp Chill AC",
       quietLabel: "Absolute silence (driver conversation off)",
       soundscape: "Silent cabin & zero music",
@@ -172,7 +172,7 @@ export default function SmartFeatures() {
                         <span className="text-[12.5px] font-bold">Climate Cabin</span>
                       </div>
                       <span className="text-[12.5px] font-black text-white font-mono bg-black/40 px-2 py-0.5 rounded border border-zinc-800">
-                        {currentMood.temp}°F • {currentMood.tempLabel}
+                        {currentMood.temp}°C • {currentMood.tempLabel}
                       </span>
                     </div>
 

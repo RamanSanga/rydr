@@ -4,7 +4,6 @@ import Services from "@/components/Services";
 import HowRydrWorks from "@/components/HowRydrWorks";
 import SmartFeatures from "@/components/SmartFeatures";
 import DriverSection from "@/components/DriverSection";
-import BusinessSection from "@/components/BusinessSection";
 import Testimonials from "@/components/Testimonials";
 import AppExperience from "@/components/AppExperience";
 import Footer from "@/components/Footer";
@@ -33,9 +32,6 @@ export default function Home() {
 
         {/* 5. Supply Dashboard Portal (Uber Driver + Stripe Console) */}
         <DriverSection />
-
-        {/* 6. Enterprise Console (Corporate Travel, billing invoicing APIs) */}
-        <BusinessSection />
 
         {/* 7. Audited Reviews (Stars, executive positions from Linear/Apex) */}
         <Testimonials />

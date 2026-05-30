@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import RideBookingCard from "./RideBookingCard";
-import { Shield, Sparkles, DollarSign, Clock } from "lucide-react";
+import { Shield, Sparkles, IndianRupee, Clock } from "lucide-react";
 
 export default function Herobar() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -121,7 +121,7 @@ export default function Herobar() {
               {/* Upfront pricing */}
               <div className="space-y-1">
                 <div className="flex items-center space-x-1 text-zinc-500">
-                  <DollarSign className="w-3.5 h-3.5 text-zinc-600" />
+                  <IndianRupee className="w-3.5 h-3.5 text-zinc-600" />
                   <span className="text-[10px] font-bold tracking-wider uppercase font-sans">Guaranteed Fares</span>
                 </div>
                 <p className="text-[11px] text-zinc-450 leading-normal font-semibold">

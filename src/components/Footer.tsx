@@ -5,31 +5,24 @@ import { Globe, ArrowUpRight } from "lucide-react";
 
 export default function Footer() {
   const productLinks = [
-    { label: "Book a Ride", href: "#ride" },
-    { label: "Become a Driver", href: "#drive" },
-    { label: "Share the Ride", href: "#business" },
+    { label: "Book a Ride", href: "/rider" },
+    { label: "Become a Driver", href: "/driver" },
+    { label: "Airport Drop-offs", href: "/rider" },
     { label: "Cozy Cabins", href: "#safety" },
   ];
 
   const driverLinks = [
-    { label: "Drive with us", href: "#drive" },
-    { label: "Earnings Visibility", href: "#drive" },
-    { label: "Driver Support", href: "#drive" },
-    { label: "Help Center", href: "#drive" },
-  ];
-
-  const businessLinks = [
-    { label: "Group Outings", href: "#business" },
-    { label: "Split Fares", href: "#business" },
-    { label: "Zero-Emission EVs", href: "#business" },
-    { label: "Outing Help", href: "#business" },
+    { label: "Drive with us", href: "/driver" },
+    { label: "Earnings Visibility", href: "/driver" },
+    { label: "Driver Support", href: "/help" },
+    { label: "Help Center", href: "/help" },
   ];
 
   const companyLinks = [
-    { label: "About Rydr", href: "#about" },
-    { label: "Join Rydr", href: "#careers" },
-    { label: "Travel Blog", href: "#blog" },
-    { label: "Press & Media", href: "#press" },
+    { label: "About Rydr", href: "/about" },
+    { label: "Safety", href: "/safety" },
+    { label: "Help Centre", href: "/help" },
+    { label: "Become a Driver", href: "/driver" },
   ];
 
   const developerLinks = [
@@ -86,7 +79,7 @@ export default function Footer() {
           </div>
 
           {/* Links Grid */}
-          <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-8">
             
             {/* Products Column */}
             <div className="space-y-4">
@@ -107,20 +100,6 @@ export default function Footer() {
               <h5 className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Join the Crew</h5>
               <ul className="space-y-2.5">
                 {driverLinks.map((link) => (
-                  <li key={link.label}>
-                    <Link href={link.href} className="text-[13px] text-zinc-650 hover:text-black font-bold transition-colors duration-150">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Business Column */}
-            <div className="space-y-4">
-              <h5 className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Share the Ride</h5>
-              <ul className="space-y-2.5">
-                {businessLinks.map((link) => (
                   <li key={link.label}>
                     <Link href={link.href} className="text-[13px] text-zinc-650 hover:text-black font-bold transition-colors duration-150">
                       {link.label}

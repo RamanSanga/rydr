@@ -1,0 +1,51 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String          @id // Storing Clerk User ID directly as primary key
+  name           String
+  email          String          @unique
+  role           String          // "rider" | "driver" | "business"
+  rides          Ride[]
+  savedLocations SavedLocation[]
+  driverLocation DriverLocation?
+}
+
+model Ride {
+  id          String   @id @default(cuid())
+  pickup      String
+  destination String
+  rideType    String
+  status      String   // "Completed" | "Scheduled" | "Cancelled"
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  driverId    String?
+  createdAt   DateTime @default(now())
+}
+
+model SavedLocation {
+  id        String   @id @default(cuid())
+  label     String   // "Home" | "Office" | "College" | "Gym"
+  address   String
+  lat       Float
+  lon       Float
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model DriverLocation {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  latitude  Float
+  longitude Float
+  isOnline  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
