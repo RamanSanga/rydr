@@ -243,7 +243,7 @@ export default function RiderDashboard() {
           </motion.h1>
         </div>
 
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 lg:gap-14 items-start">
           
           {/* Left Column: Booking & Map */}
           <div className="lg:col-span-7 flex flex-col space-y-6">
