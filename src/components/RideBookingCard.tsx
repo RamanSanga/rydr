@@ -491,15 +491,7 @@ export default function RideBookingCard({
               <h3 className="text-[16px] font-bold text-zinc-900 tracking-tight">Book a Ride</h3>
             </div>
 
-            {/* TEMPORARY RIDER DEBUG UI */}
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm mb-6 text-[10px] text-red-900 font-mono">
-              <h3 className="font-bold mb-2 uppercase text-red-700">Rider Debug Info</h3>
-              <p>Current Latitude: {pCoords ? pCoords[1].toFixed(5) : "Detecting..."}</p>
-              <p>Current Longitude: {pCoords ? pCoords[0].toFixed(5) : "Detecting..."}</p>
-              <p>Total Online Drivers Found: {debugSearchMeta?.totalOnline ?? "Wait for search..."}</p>
-              <p>Drivers Within Radius: {debugSearchMeta?.totalWithinRadius ?? "Wait for search..."}</p>
-              <p>Radius Used: {debugSearchMeta?.radius ? `${debugSearchMeta.radius} km` : "Wait for search..."}</p>
-            </div>
+
 
             <form onSubmit={triggerSearch} className="space-y-4">
               {/* Feature 6: Simulated Surge Pricing Banner */}
@@ -774,7 +766,7 @@ export default function RideBookingCard({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-zinc-900">{foundDriver.user?.name || "Rohit Kumar"}</h4>
-                  <p className="text-[10px] text-red-600 font-bold mt-0.5 mb-0.5">DEBUG: {foundDriver.distanceKm?.toFixed(2)} km away | Lat {foundDriver.latitude?.toFixed(4)}, Lng {foundDriver.longitude?.toFixed(4)}</p>
+
                   <div className="flex items-center space-x-2 mt-0.5">
                     <div className="flex items-center space-x-1 text-amber-500">
                       <Star className="w-3 h-3 fill-current" />
@@ -876,9 +868,9 @@ export default function RideBookingCard({
                 We couldn't find any available drivers near your location.
               </p>
               {debugNoDriverReason && (
-                <div className="mt-3 text-xs bg-red-100 text-red-800 border border-red-200 p-2 rounded-lg font-mono">
-                  DEBUG REASON:<br/>{debugNoDriverReason}
-                </div>
+                <p className="text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full inline-block mt-3">
+                  {debugNoDriverReason.replace("SERVER EXCEPTION: ", "").replace("CLIENT CATCH BLOCK ERROR: ", "")}
+                </p>
               )}
             </div>
             <button

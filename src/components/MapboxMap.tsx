@@ -50,7 +50,7 @@ export default function MapboxMap({
       const map = new mapboxgl.Map({
         container: mapContainerRef.current,
         style: "mapbox://styles/mapbox/light-v11",
-        center: [-122.4194, 37.7749], // SFO/SF default center
+        center: [77.2090, 28.6139], // Delhi default center
         zoom: 12,
         attributionControl: false,
       });

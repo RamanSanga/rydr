@@ -1,58 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import RiderNavbar from "@/components/RiderNavbar";
+import { useUser } from "@clerk/nextjs";
 import RideBookingCard from "@/components/RideBookingCard";
 import { Ride, getRouteDistance, calculateFare } from "@/lib/data";
 import { fetchUserRides } from "@/actions/ride";
 import { getNearbyDrivers } from "@/actions/driver";
 import { fetchSavedLocations, createSavedLocation } from "@/actions/savedLocation";
-import { Home, Briefcase, Plane, Activity, MapPin, Clock, Navigation2 } from "lucide-react";
+import { Home, Briefcase, Plane, Activity, MapPin, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import MapboxMap from "@/components/MapboxMap";
 import { motion } from "framer-motion";
 
-const greetings = [
-  "👀 Aaj kis taraf bhatakna hai?",
-  "😏 Seedha destination batao, judge nahi karenge.",
-  "🚖 Ghar? Ya plan kuch aur hai?",
-  "🌆 City ready hai. Tum ready ho?",
-  "🤔 Itni der se app khol ke dekh kya rahe ho? Kahan jaana hai?",
-  "🌙 Raat lambi ho gayi? Ab ghar chalte hain?",
-  "🛣️ Long drive ka mood hai?",
-  "☕ Coffee peene ja rahe ho ya bas ghoomne?",
-  "😌 Traffic hum dekh lenge. Tum bas plan banao."
-];
-
-const inspirationCards = [
-  {
-    title: "Airport Transfer",
-    subtitle: "Never miss a flight.",
-    image: "/images/airport_pickup.png",
-    shortcut: "IGI Airport T3, New Delhi"
-  },
-  {
-    title: "Weekend Escape",
-    subtitle: "Roads are calling.",
-    image: "/images/sunset_drive.png",
-    shortcut: "Cyber Hub, Gurugram"
-  },
-  {
-    title: "Coffee Run",
-    subtitle: "Take the scenic route.",
-    image: "/images/daily_commute.png",
-    shortcut: "Connaught Place, New Delhi"
-  },
-  {
-    title: "Late Night Ride",
-    subtitle: "We'll get you home safely.",
-    image: "/images/late_night_ride.png",
-    shortcut: "Home"
-  }
-];
-
 export default function RiderDashboard() {
-  const [greeting, setGreeting] = useState(greetings[0]);
+  const { user } = useUser();
+  const [greeting, setGreeting] = useState("Hello 👋");
   const [localRides, setLocalRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,11 +29,20 @@ export default function RiderDashboard() {
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
 
+  // Time-based greeting
   useEffect(() => {
-    setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
-  }, []);
+    const hour = new Date().getHours();
+    const name = user?.firstName ? `, ${user.firstName}` : "";
+    if (hour < 12) {
+      setGreeting(`Good morning${name} 👋`);
+    } else if (hour < 17) {
+      setGreeting(`Good afternoon${name} ☀️`);
+    } else {
+      setGreeting(`Good evening${name} 🌙`);
+    }
+  }, [user]);
 
-  // Feature 1: Current Location detection via browser Geolocation + Nominatim Reverse Geocoding
+  // Feature 1: Current Location detection
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -105,7 +76,7 @@ export default function RiderDashboard() {
     }
   }, []);
 
-  // Poll for nearby drivers with optimized state updates
+  // Poll for nearby drivers
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -115,7 +86,6 @@ export default function RiderDashboard() {
           const response = await getNearbyDrivers(pickupCoords[1], pickupCoords[0]); // pass lat, lng
           
           setNearbyDrivers(prev => {
-            // Only update state if drivers changed (prevents React from thrashing renders on MapboxMap and BookingCard)
             const prevIds = prev.map(d => `${d.userId}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}`).join(',');
             const newIds = response.drivers.map(d => `${d.userId}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}`).join(',');
             if (prevIds !== newIds) {
@@ -130,7 +100,7 @@ export default function RiderDashboard() {
     };
 
     fetchDrivers();
-    interval = setInterval(fetchDrivers, 15000); // Poll every 15s instead of 10s
+    interval = setInterval(fetchDrivers, 15000);
 
     return () => clearInterval(interval);
   }, [pickupCoords]);
@@ -144,7 +114,6 @@ export default function RiderDashboard() {
       if (locs.length > 0) {
         setDbSavedLocations(locs);
       } else {
-        // Fallback seed inside PostgreSQL if empty
         const initialLocs = [
           { label: "Home", address: "Sector 15, Part 2, Gurugram, Haryana", lat: 28.4619, lon: 77.0427 },
           { label: "Office", address: "Cyber Hub, DLF Cyber City, Gurugram", lat: 28.4950, lon: 77.0878 },
@@ -192,7 +161,6 @@ export default function RiderDashboard() {
       try {
         const dbRides = await fetchUserRides();
 
-        // Map raw DB logs to the high-fidelity UI format
         const formattedRides: Ride[] = dbRides.map((r) => ({
           id: r.id,
           date: new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -200,9 +168,9 @@ export default function RiderDashboard() {
           pickup: r.pickup,
           destination: r.destination,
           price: "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
-          driverName: "Vikram Malhotra",
-          driverInitials: "VM",
-          vehicle: "Tesla Model Y (White)",
+          driverName: r.driverId ? "Vetted Partner" : "Searching...",
+          driverInitials: "VP",
+          vehicle: "RYDR Clean Cabin",
           status: r.status as any,
           tier: r.rideType === "economy" ? "Economy" : r.rideType === "premium" ? "Premium" : "XL",
         }));
@@ -219,178 +187,142 @@ export default function RiderDashboard() {
     loadDashboardData();
   }, []);
 
-  const lastCompletedRide = 
-    localRides.find(r => r.status === "Requested") || 
-    localRides.find(r => r.status === "Driver Assigned") || 
-    localRides.find(r => r.status === "On The Way") || 
-    localRides.find(r => r.status === "Completed") ||
-    localRides.find(r => r.status === "Cancelled");
+  const completedRides = localRides.slice(0, 3); // last 2-3 rides
 
   return (
-    <main className="relative min-h-screen bg-white text-[#111111] antialiased pb-24 pt-24 md:pt-28">
-      <RiderNavbar />
-
-      <div className="max-w-[1200px] mx-auto px-5 sm:px-6">
+    <main className="relative min-h-screen bg-white text-zinc-900 antialiased pb-24 pt-8 sm:pt-12">
+      {/* Background ambient lighting */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[500px] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.02),transparent_60%)] pointer-events-none z-0" />
+      
+      <div className="max-w-4xl mx-auto px-5 sm:px-6 relative z-10 space-y-8">
         
         {/* Dynamic Greeting */}
-        <div className="mb-6 md:mb-10">
+        <div className="flex items-center justify-between">
           <motion.h1 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-zinc-900"
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900"
           >
             {greeting}
           </motion.h1>
         </div>
 
-        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 lg:gap-14 items-start">
-          
-          {/* Left Column: Booking & Map */}
-          <div className="lg:col-span-7 flex flex-col space-y-6">
-            
-            {/* Quick Shortcuts (Horizontal Scroll) */}
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0">
-              {dbSavedLocations.map((addr) => {
-                const addressIcons: any = {
-                  Home: Home,
-                  Office: Briefcase,
-                  College: Plane,
-                  Gym: Activity,
-                };
-                const Icon = addressIcons[addr.label] || MapPin;
-                return (
-                  <button
-                    key={addr.id}
-                    onClick={() => handleQuickBook(addr)}
-                    className="flex items-center gap-2 px-4 py-3 bg-[#F8F8F8] border border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50 rounded-2xl transition-all whitespace-nowrap active:scale-95 cursor-pointer shadow-3xs"
-                  >
-                    <Icon className="w-4 h-4 text-zinc-600" />
-                    <span className="text-sm font-bold text-zinc-900">{addr.label}</span>
-                  </button>
-                );
-              })}
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 px-4 py-3 bg-white border border-dashed border-zinc-300 hover:border-zinc-500 rounded-2xl transition-all whitespace-nowrap active:scale-95 cursor-pointer text-zinc-500 hover:text-zinc-800"
-              >
-                <span className="text-sm font-bold">Add Place</span>
-              </Link>
-            </div>
+        {/* Section 1: Map Area (wrapped in beautiful h-[200px] sm:h-[280px] rounded-2xl container) */}
+        <div className="w-full h-[200px] sm:h-[280px] rounded-2xl overflow-hidden border border-zinc-200/80 shadow-sm relative z-0">
+          <MapboxMap
+            pickupCoords={pickupCoords}
+            destinationCoords={destinationCoords}
+            pickupName={pickup}
+            destinationName={destination}
+            routeGeometry={routeGeometry}
+            distanceMiles={distanceMiles}
+            durationMins={durationMins}
+            isLoadingRoute={isLoadingRoute}
+            nearbyDrivers={nearbyDrivers}
+          />
+        </div>
 
-            {/* Ride Booking Card & Map Container */}
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-zinc-200/60 flex flex-col">
-              
-              {/* Map taking top half on mobile, or just integrated */}
-              <div className="w-full h-[250px] sm:h-[350px] relative z-0">
-                <MapboxMap
-                  pickupCoords={pickupCoords}
-                  destinationCoords={destinationCoords}
-                  pickupName={pickup}
-                  destinationName={destination}
-                  routeGeometry={routeGeometry}
-                  distanceMiles={distanceMiles}
-                  durationMins={durationMins}
-                  isLoadingRoute={isLoadingRoute}
-                  nearbyDrivers={nearbyDrivers}
-                />
-              </div>
+        {/* Section 2: Ride Booking Card */}
+        <div className="bg-white border border-zinc-200 rounded-3xl p-2 shadow-md relative z-10">
+          <RideBookingCard
+            pickup={pickup}
+            setPickup={setPickup}
+            destination={destination}
+            setDestination={setDestination}
+            pickupCoords={pickupCoords}
+            setPickupCoords={setPickupCoords}
+            destinationCoords={destinationCoords}
+            setDestinationCoords={setDestinationCoords}
+            distanceMiles={distanceMiles}
+            setDistanceMiles={setDistanceMiles}
+            durationMins={durationMins}
+            setDurationMins={setDurationMins}
+            setRouteGeometry={setRouteGeometry}
+            setIsLoadingRoute={setIsLoadingRoute}
+          />
+        </div>
 
-              {/* Booking Card underneath */}
-              <div className="relative z-10 bg-white -mt-4 rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-2">
-                <RideBookingCard
-                  pickup={pickup}
-                  setPickup={setPickup}
-                  destination={destination}
-                  setDestination={setDestination}
-                  pickupCoords={pickupCoords}
-                  setPickupCoords={setPickupCoords}
-                  destinationCoords={destinationCoords}
-                  setDestinationCoords={setDestinationCoords}
-                  distanceMiles={distanceMiles}
-                  setDistanceMiles={setDistanceMiles}
-                  durationMins={durationMins}
-                  setDurationMins={setDurationMins}
-                  setRouteGeometry={setRouteGeometry}
-                  setIsLoadingRoute={setIsLoadingRoute}
-                />
-              </div>
-            </div>
-
+        {/* Section 3: Saved Locations Quick Shortcuts */}
+        <div className="space-y-3">
+          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Where to?</span>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0">
+            {dbSavedLocations.map((addr) => {
+              const addressIcons: any = {
+                Home: Home,
+                Office: Briefcase,
+                College: Plane,
+                Gym: Activity,
+              };
+              const Icon = addressIcons[addr.label] || MapPin;
+              return (
+                <button
+                  key={addr.id}
+                  onClick={() => handleQuickBook(addr)}
+                  className="flex items-center gap-2 px-4 py-3 bg-zinc-50 border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-100/50 rounded-xl transition-all whitespace-nowrap active:scale-[0.98] cursor-pointer shadow-3xs"
+                >
+                  <Icon className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span className="text-sm font-semibold text-zinc-950">{addr.label}</span>
+                </button>
+              );
+            })}
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 px-4 py-3 bg-white border border-dashed border-zinc-300 hover:border-zinc-400 rounded-xl transition-all whitespace-nowrap active:scale-[0.98] cursor-pointer text-zinc-500 hover:text-zinc-700 shadow-3xs"
+            >
+              <span className="text-sm font-semibold">Add Place</span>
+            </Link>
           </div>
+        </div>
 
-          {/* Right Column: Inspiration & Recent Activity */}
-          <div className="lg:col-span-5 space-y-10">
-            
-            {/* Inspiration Cards */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-black text-zinc-900 tracking-tight">Ride Inspiration</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {inspirationCards.map((card, i) => (
-                  <div
-                    key={i}
-                    onClick={() => {
-                      setDestination(card.shortcut);
-                      // In a real app we'd trigger the geocoding here too, but just setting text works well enough for demo
-                    }}
-                    className="group relative h-40 sm:h-48 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all"
-                  >
-                    <img 
-                      src={card.image} 
-                      alt={card.title}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                    <div className="absolute bottom-4 left-4 pr-4">
-                      <h4 className="text-white font-black text-sm tracking-tight leading-tight">{card.title}</h4>
-                      <p className="text-zinc-300 text-[10px] font-semibold mt-0.5">{card.subtitle}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Section 4: Recent Rides */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Recent Activity</span>
+            <Link href="/rides" className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1">
+              <span>View All</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          
+          {loading ? (
+            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 space-y-4 animate-pulse">
+               <div className="w-1/3 h-4 bg-zinc-200 rounded" />
+               <div className="w-full h-12 bg-zinc-200 rounded" />
             </div>
-
-            {/* Recent Ride Teaser */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-black text-zinc-900 tracking-tight">Recent Activity</h3>
-              
-              {loading ? (
-                <div className="bg-[#F8F8F8] border border-zinc-200 rounded-2xl p-5 space-y-4 animate-pulse">
-                   <div className="w-1/3 h-4 bg-zinc-200 rounded" />
-                   <div className="w-full h-12 bg-zinc-200 rounded" />
-                </div>
-              ) : lastCompletedRide ? (
-                <Link href="/rides" className="block bg-[#F8F8F8] border border-zinc-200 hover:border-zinc-350 rounded-2xl p-5 transition-all group">
-                  <div className="flex items-center justify-between mb-3">
+          ) : completedRides.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {completedRides.map((ride) => (
+                <div key={ride.id} className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4.5 space-y-3.5 shadow-3xs">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-3xs">
-                        <Clock className="w-4 h-4 text-zinc-600" />
+                      <div className="w-7 h-7 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-3xs">
+                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
                       </div>
                       <div>
-                        <div className="text-xs font-black text-zinc-900">{lastCompletedRide.status}</div>
-                        <div className="text-[10px] text-zinc-500 font-semibold">{lastCompletedRide.date}</div>
+                        <div className="text-xs font-bold text-zinc-800">{ride.status}</div>
+                        <div className="text-[9px] text-zinc-400 font-semibold">{ride.date}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-black text-zinc-900">{lastCompletedRide.price}</div>
-                      <div className="text-[10px] text-zinc-500 font-semibold">{lastCompletedRide.tier}</div>
+                      <div className="text-sm font-black text-zinc-900">{ride.price}</div>
+                      <div className="text-[9px] text-zinc-400 font-semibold uppercase tracking-wider">{ride.tier}</div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-xs text-zinc-600 font-semibold bg-white border border-zinc-200 p-2.5 rounded-xl">
-                    <Navigation2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                    <span className="truncate">{lastCompletedRide.destination}</span>
+                  <div className="text-[11px] text-zinc-550 font-medium bg-white border border-zinc-200 p-2.5 rounded-xl flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    <span className="truncate">{ride.destination}</span>
                   </div>
-                </Link>
-              ) : (
-                <div className="bg-[#F8F8F8] border border-zinc-200 rounded-2xl p-6 text-center text-sm font-semibold text-zinc-500">
-                  No recent rides. Where to next?
                 </div>
-              )}
+              ))}
             </div>
-
-          </div>
-
+          ) : (
+            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 text-center text-sm font-semibold text-zinc-400">
+              No recent rides. Where would you like to go?
+            </div>
+          )}
         </div>
+
       </div>
     </main>
   );

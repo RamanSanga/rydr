@@ -1,4 +1,3 @@
-import Navbar from "@/components/Navbar";
 import Herobar from "@/components/Herobar";
 import Services from "@/components/Services";
 import HowRydrWorks from "@/components/HowRydrWorks";
@@ -10,36 +9,33 @@ import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen bg-white text-[#111111] antialiased overflow-hidden select-none">
-      {/* Global subtle radial glow for structural lighting (Blue Functional Accent) */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[500px] bg-radial-gradient from-blue-500/[0.015] via-transparent to-transparent pointer-events-none z-0" />
+    <main className="relative min-h-screen bg-white text-zinc-900 antialiased overflow-x-hidden">
+      {/* Background decoration - subtle top radial glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[600px] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.03),transparent_60%)] pointer-events-none z-0" />
       
-      {/* Sticky semi-transparent blurred header */}
-      <Navbar />
-
-      <div className="relative z-10">
-        {/* 1. Hero Block (Headline + Booking Card + Live Stats + GPS Visual Map) */}
+      <div className="relative z-10 flex flex-col gap-20 sm:gap-28 pb-16">
+        {/* 1. Hero Block with Booking Widget */}
         <Herobar />
 
-        {/* 2. Mobility Suite (2 Featured + 4 Supporting Grid Hierarchy) */}
+        {/* 2. Services / Ride Options */}
         <Services />
 
-        {/* 3. Operational Model (Simple 3-step request-matching-tracking guide) */}
+        {/* 3. Operational Model */}
         <HowRydrWorks />
 
-        {/* 4. Smart Bypass Radar (Bypass congestion simulations) */}
+        {/* 4. Why Choose RYDR */}
         <SmartFeatures />
 
-        {/* 5. Supply Dashboard Portal (Uber Driver + Stripe Console) */}
+        {/* 5. Driver CTA Section */}
         <DriverSection />
 
-        {/* 7. Audited Reviews (Stars, executive positions from Linear/Apex) */}
+        {/* 6. Testimonials */}
         <Testimonials />
 
-        {/* 8. Handheld Mockup (Consolidated digital wallet eco telemetries) */}
+        {/* 7. App Experience (Get the App) */}
         <AppExperience />
 
-        {/* 9. Premium Spacious Footer */}
+        {/* 8. Premium Spacious Footer */}
         <Footer />
       </div>
     </main>

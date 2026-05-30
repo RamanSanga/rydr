@@ -1,101 +1,87 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Star, ShieldCheck } from "lucide-react";
 
-interface TestimonialItem {
-  name: string;
-  role: string;
-  company: string;
-  content: string;
-  rating: number;
-  cardClass: string;
-  badgeClass: string;
-  starColor: string;
-}
-
 export default function Testimonials() {
-  const testimonials: TestimonialItem[] = [
+  const testimonials = [
     {
-      name: "Sarah Jenkins",
-      role: "Airport Commuter",
-      company: "Daily Traveler",
-      content: "Rydr is a complete lifesaver on rainy evening arrivals. Sinking into a warm, cozy cabin when it's pouring outside, with a friendly driver waiting with a massive doorside umbrella, is absolute comfort.",
+      name: "Rohan Mehta",
+      role: "Daily Commuter",
+      content: "RYDR is a complete lifesaver for my daily commute in Delhi. Upfront fares and super polite driver-partners mean I can focus on checking my emails in absolute peace.",
       rating: 5,
-      cardClass: "bg-blue-50/40 border-blue-100 hover:border-blue-200 hover:shadow-blue-50/30",
-      badgeClass: "bg-blue-100/60 text-blue-800 border-blue-200/50",
-      starColor: "fill-blue-600 text-blue-600",
+      tag: "Verified Rider",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      border: "border-emerald-100",
     },
     {
-      name: "David Miller",
-      role: "Chai Run Regular",
-      company: "Late Night Crew",
-      content: "We depend on Rydr for spontaneous late-night chai runs. Setting up multi-stops to pick up the crew, splitting the fare cashless in-app, and listening to our playlist is the best way to travel together.",
+      name: "Priya Nair",
+      role: "Late Night Traveler",
+      content: "As a woman traveling late, safety is everything. The real-time tracking feature and background-verified drivers give me total peace of mind every single time.",
       rating: 5,
-      cardClass: "bg-amber-50/40 border-amber-100 hover:border-amber-200 hover:shadow-amber-50/30",
-      badgeClass: "bg-amber-100/60 text-amber-800 border-amber-250/50",
-      starColor: "fill-amber-600 text-amber-600",
+      tag: "Frequent Rider",
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+      border: "border-blue-100",
     },
     {
-      name: "Aria Chen",
+      name: "Arjun Verma",
       role: "Weekend Explorer",
-      company: "Road Tripper",
-      content: "Long drive mood? Rydr is easily my favorite way to escape the city on weekends. Sinking into a quiet, zero-emission cabin for out-of-town drives gives me absolute peace of mind.",
+      content: "Sinking into a pre-cooled sedan after a long flight at the airport is pure comfort. The OSRM live routing is incredibly precise and the cashless payouts are effortless.",
       rating: 5,
-      cardClass: "bg-green-50/40 border-green-100 hover:border-green-200 hover:shadow-green-50/30",
-      badgeClass: "bg-green-100/60 text-green-800 border-green-200/50",
-      starColor: "fill-green-600 text-green-600",
+      tag: "Business Traveler",
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      border: "border-amber-100",
     },
   ];
 
   return (
-    <section id="about" className="bg-[#F8F8F8] py-32 border-t border-zinc-200 relative overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-6">
+    <section className="bg-white py-16 sm:py-24 relative overflow-hidden">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 relative z-10 space-y-12">
         
         {/* Section Header */}
-        <div className="text-center max-w-xl mx-auto space-y-4 mb-16">
-          <span className="text-[10px] font-mono tracking-widest text-amber-600 font-bold uppercase">
-            Traveler Stories
-          </span>
-          <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-zinc-900 leading-tight">
-            Where Rydr takes you
+        <div className="text-center max-w-xl mx-auto space-y-3">
+          <span className="eyebrow">Rider Testimonials</span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 leading-tight">
+            Hear from our community
           </h2>
-          <p className="text-zinc-500 text-sm leading-normal font-semibold">
-            Hear how real people rely on Rydr for late-night chai runs, rainy commutes, date nights, and weekend escapes.
+          <p className="text-zinc-500 text-sm sm:text-base leading-relaxed">
+            Discover why thousands of daily riders and drivers choose RYDR for safe, pleasant, and premium journeys.
           </p>
         </div>
 
-        {/* Testimonials Grid (Visual Accent Card backgrounds) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        {/* Testimonials Horizontal Scroll on Mobile / 3 Columns Grid on Desktop */}
+        <div className="flex overflow-x-auto pb-4 gap-6 scrollbar-hide md:grid md:grid-cols-3 md:overflow-x-visible md:pb-0 snap-x snap-mandatory">
           {testimonials.map((t, idx) => (
             <div
               key={idx}
-              className={`border p-6.5 rounded-2xl flex flex-col justify-between space-y-6 hover:shadow-md transition-all duration-200 ${t.cardClass}`}
+              className="min-w-[280px] sm:min-w-[320px] md:min-w-0 snap-align-start bg-white border border-zinc-200 p-6 sm:p-7 rounded-2xl flex flex-col justify-between space-y-6 hover:shadow-md hover:border-zinc-300 transition-all duration-300 shadow-sm"
             >
               <div className="space-y-4">
-                {/* Minimal Star Rating */}
-                <div className="flex items-center space-x-1">
+                {/* Star Rating */}
+                <div className="flex items-center gap-0.5">
                   {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} className={`w-3.5 h-3.5 stroke-0 ${t.starColor}`} />
+                    <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500 stroke-0" />
                   ))}
                 </div>
                 
                 {/* Quote Content */}
-                <p className="text-[13px] text-zinc-700 leading-relaxed font-semibold italic">
+                <p className="text-zinc-650 text-xs sm:text-sm leading-relaxed italic">
                   "{t.content}"
                 </p>
               </div>
 
               {/* User details */}
-              <div className="flex items-center justify-between pt-4 border-t border-zinc-200/60">
+              <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
                 <div>
-                  <div className="text-xs font-black text-zinc-900 tracking-tight">{t.name}</div>
-                  <div className="text-[10px] text-zinc-500 font-semibold leading-none mt-1">{t.role}</div>
+                  <h4 className="text-sm font-bold text-zinc-900">{t.name}</h4>
+                  <span className="text-[10px] text-zinc-400 font-semibold block mt-0.5">{t.role}</span>
                 </div>
                 
-                <div className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-[9px] font-mono font-bold uppercase shadow-3xs border ${t.badgeClass}`}>
-                  <ShieldCheck className="w-3 h-3 stroke-[2.5]" />
-                  <span>{t.company}</span>
+                <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase ${t.bg} ${t.color} border ${t.border} shadow-3xs`}>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>{t.tag}</span>
                 </div>
               </div>
             </div>

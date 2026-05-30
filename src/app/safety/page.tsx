@@ -1,513 +1,197 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { Shield, ShieldCheck, MapPin, PhoneCall, HelpCircle, ArrowRight, UserCheck } from "lucide-react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import {
-  ShieldCheck,
-  PhoneCall,
-  MapPin,
-  Eye,
-  AlertTriangle,
-  CheckCircle2,
-  ArrowRight,
-  ChevronDown,
-  Clock,
-  FileText,
-  Lock,
-  Fingerprint,
-} from "lucide-react";
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" as const } },
-};
-
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1 } },
-};
+function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+  return (
+    <div className="space-y-1.5">
+      <span className="eyebrow">{eyebrow}</span>
+      <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900">{title}</h2>
+      <p className="text-xs sm:text-sm text-zinc-500 font-medium">{description}</p>
+    </div>
+  );
+}
 
 export default function SafetyPage() {
   const pillars = [
     {
-      icon: Fingerprint,
-      title: "Driver Verification",
-      description:
-        "Every driver passes Aadhaar identity verification, a criminal background check, and a vehicle safety inspection before they can accept a single ride. No exceptions.",
-      accent: "text-blue-600",
-      bg: "bg-blue-50/70 border-blue-100",
-      iconBg: "bg-white border-blue-100",
+      icon: UserCheck,
+      title: "Verified Drivers",
+      description: "Every driver-partner undergoes professional screening, Aadhaar background check, and taxi orientation before onboarding.",
+      color: "text-blue-600",
+      bg: "bg-blue-50",
     },
     {
       icon: MapPin,
-      title: "Live Trip Tracking",
-      description:
-        "Your trip is tracked in real time from pickup to drop-off. Share your live location with family or friends directly from the app with one tap.",
-      accent: "text-emerald-600",
-      bg: "bg-emerald-50/70 border-emerald-100",
-      iconBg: "bg-white border-emerald-100",
+      title: "Live Trip Sharing",
+      description: "Share your live location and ETA with family or friends directly from the app. They can track your trip in real time.",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
     },
     {
       icon: PhoneCall,
-      title: "Emergency Assistance",
-      description:
-        "One tap on the SOS button connects you to our safety team immediately. We'll contact emergency services and alert your saved emergency contact simultaneously.",
-      accent: "text-rose-600",
-      bg: "bg-rose-50/70 border-rose-100",
-      iconBg: "bg-white border-rose-100",
+      title: "SOS Emergency Button",
+      description: "Our in-app SOS button links you instantly to the RYDR safety desk and emergency response services.",
+      color: "text-rose-600",
+      bg: "bg-rose-50",
     },
     {
-      icon: Eye,
-      title: "Ride Monitoring",
-      description:
-        "Our system monitors every trip for unusual patterns — unplanned stops, route deviations, or extended delays. Any anomaly triggers an automatic safety check.",
-      accent: "text-purple-600",
-      bg: "bg-purple-50/70 border-purple-100",
-      iconBg: "bg-white border-purple-100",
-    },
-    {
-      icon: Lock,
-      title: "Anonymous Calling",
-      description:
-        "When you call your driver through the app, your personal phone number is never shared. All calls go through our secure, anonymized relay system.",
-      accent: "text-amber-600",
-      bg: "bg-amber-50/70 border-amber-100",
-      iconBg: "bg-white border-amber-100",
-    },
-    {
-      icon: FileText,
-      title: "Post-Trip Reports",
-      description:
-        "Every ride generates a complete trip record — route taken, time, driver details, fare. Stored securely. Available to you and to law enforcement if ever needed.",
-      accent: "text-zinc-700",
-      bg: "bg-zinc-50/70 border-zinc-200",
-      iconBg: "bg-white border-zinc-200",
+      icon: ShieldCheck,
+      title: "24/7 Dedicated Support",
+      description: "Our incident response team is active 24/7 to solve route issues and assist with security queries.",
+      color: "text-purple-600",
+      bg: "bg-purple-50",
     },
   ];
 
-  const driverStandards = [
+  const standards = [
     {
       step: "01",
-      title: "Aadhaar + PAN Verification",
-      detail: "Identity confirmed and linked to a verified government ID before account approval.",
+      title: "Aadhaar Identity Link",
+      detail: "Verification against government registry checks to lock the driver's biometric identity.",
     },
     {
       step: "02",
-      title: "Criminal Background Check",
-      detail: "National-level police verification conducted via a certified third-party agency.",
+      title: "Background Screening",
+      detail: "Criminal records check completed by professional third-party safety agencies.",
     },
     {
       step: "03",
-      title: "Vehicle Inspection",
-      detail: "Car must pass a 25-point safety checklist — tyres, lights, AC, seatbelts, and more.",
+      title: "Vehicle Fitness Audit",
+      detail: "Strict 25-point visual and mechanical check to ensure optimal safety.",
     },
-    {
-      step: "04",
-      title: "Driver Orientation",
-      detail: "2-hour in-person training covering route safety, respectful conduct, and emergency protocols.",
-    },
-    {
-      step: "05",
-      title: "Live Photo Match",
-      detail: "Before every shift, drivers complete a real-time selfie verification to confirm they're the registered driver.",
-    },
-    {
-      step: "06",
-      title: "Ongoing Rating Review",
-      detail: "Ratings below 4.5 trigger a mandatory review. Sustained poor behaviour leads to permanent deactivation.",
-    },
-  ];
-
-  const nightSafety = [
-    "Female passengers can opt for verified female drivers",
-    "Emergency SOS button visible on every ride screen",
-    "Automatic location share to saved emergency contact after 11 PM",
-    "All late-night rides have a built-in check-in after 30 minutes",
-    "Our safety team monitors active trips 24/7",
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
-
-      {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-white pt-28 pb-20 md:pt-36 md:pb-28">
-        <div className="absolute inset-0 premium-grid-fine pointer-events-none opacity-40" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white pointer-events-none" />
-
-        <div className="relative max-w-5xl mx-auto px-5 sm:px-6 text-center space-y-6">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-block text-[10px] font-mono font-bold tracking-widest text-blue-600 uppercase"
-          >
-            Your Safety
-          </motion.span>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-zinc-900 leading-[1.05]"
-          >
-            Every ride is designed
-            <br className="hidden sm:block" /> to keep you{" "}
-            <span className="text-blue-600">safe.</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-base sm:text-lg text-zinc-500 font-semibold max-w-2xl mx-auto leading-relaxed"
-          >
-            Safety isn't a feature we added later. It's the reason Rydr was built.
-            From driver screening to real-time monitoring, everything we do is to
-            make sure you get home safe — every single time.
-          </motion.p>
+    <div className="min-h-screen bg-white text-zinc-900 flex flex-col pt-8 sm:pt-12">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-5 sm:px-6 space-y-16 pb-20">
+        
+        {/* Clean Hero Area */}
+        <div className="text-center max-w-xl mx-auto space-y-4">
+          <div className="h-12 w-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto shadow-sm">
+            <Shield className="w-6 h-6 text-emerald-600 animate-pulse" />
+          </div>
+          <span className="eyebrow block">RYDR SAFETY</span>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 leading-tight">
+            Your safety is our priority
+          </h1>
+          <p className="text-zinc-500 text-sm sm:text-base leading-relaxed">
+            Safety isn't a feature we added later. It is built directly into every single journey, screening step, and support desk response.
+          </p>
         </div>
-      </section>
 
-      {/* ── Safety Photo ── */}
-      <section className="w-full overflow-hidden">
-        <div className="relative">
-          <img
-            src="/images/safety_passenger.png"
-            alt="Passenger tracking ride on Rydr app at night"
-            className="w-full h-[320px] sm:h-[420px] md:h-[500px] object-cover object-top"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-          <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-            <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md border border-zinc-200 rounded-2xl px-5 py-3 shadow-xl">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-black text-zinc-900">Live Trip Tracking Active</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-600 ml-1" />
+        {/* 4 Safety Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {pillars.map((p, idx) => {
+            const Icon = p.icon;
+            return (
+              <div 
+                key={idx}
+                className="bg-white border border-zinc-200 p-6 rounded-2xl flex gap-4 hover:shadow-md transition-all shadow-sm hover-lift"
+              >
+                <div className={`h-11 w-11 rounded-xl ${p.bg} flex items-center justify-center shrink-0 shadow-3xs`}>
+                  <Icon className={`w-5 h-5 ${p.color}`} />
+                </div>
+                <div className="space-y-1 mt-0.5">
+                  <h3 className="text-sm sm:text-base font-bold text-zinc-900">{p.title}</h3>
+                  <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">{p.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Simplified Timeline standards */}
+        <div className="space-y-8 bg-zinc-50 border border-zinc-200 rounded-3xl p-6 sm:p-8">
+          <SectionHeading eyebrow="STANDARDS" title="Rigorous Driver Screening" description="Every driver-partner must complete our multi-point background check before going online." />
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+            {standards.map((s, idx) => (
+              <div key={idx} className="bg-white border border-zinc-200 p-5 rounded-xl space-y-3 shadow-3xs">
+                <span className="text-xs font-mono font-bold bg-zinc-50 text-zinc-500 px-2 py-0.5 rounded border border-zinc-150">
+                  Step {s.step}
+                </span>
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-900">{s.title}</h4>
+                <p className="text-[11px] sm:text-xs text-zinc-500 leading-relaxed font-medium">{s.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Night Safety Section as a gorgeous minimal card */}
+        <div className="bg-zinc-900 text-white rounded-3xl p-6 sm:p-8 space-y-6 relative overflow-hidden shadow-lg">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.06),transparent_70%)] pointer-events-none" />
+          
+          <div className="space-y-2 relative z-10">
+            <span className="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">After Dark protection</span>
+            <h3 className="text-lg sm:text-xl font-bold">Late-night trip care</h3>
+            <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed max-w-xl">
+              We add extra monitoring features after 11 PM. Our systems run automatic delay checks, late-night trip route verification, and allow instant sharing of trip history logs.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-zinc-300 relative z-10 pt-2">
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              24/7 dedicated watch desk
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Automatic location sharing at night
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              In-app SOS button on every route
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Strict driver selfie selfie matching
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ── Safety Pillars ── */}
-      <section className="bg-[#F8F8F8] border-t border-zinc-200 py-20 md:py-28">
-        <div className="max-w-5xl mx-auto px-5 sm:px-6 space-y-12">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center space-y-4"
-          >
-            <motion.span
-              variants={fadeUp}
-              className="text-[10px] font-mono font-bold tracking-widest text-blue-600 uppercase"
-            >
-              Built-In Safety
-            </motion.span>
-            <motion.h2
-              variants={fadeUp}
-              className="text-3xl sm:text-4xl font-black tracking-tighter text-zinc-900 leading-tight"
-            >
-              Six layers of protection on every trip.
-            </motion.h2>
-            <motion.p
-              variants={fadeUp}
-              className="text-zinc-500 text-sm font-semibold max-w-xl mx-auto leading-relaxed"
-            >
-              We don't rely on a single safeguard. Safety at Rydr is layered — each
-              feature backs up the others.
-            </motion.p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            variants={stagger}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            {pillars.map((p, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                className={`border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow ${p.bg}`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-sm ${p.iconBg} ${p.accent}`}
-                >
-                  <p.icon className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-black text-zinc-900 tracking-tight">
-                  {p.title}
-                </h3>
-                <p className="text-sm text-zinc-600 leading-relaxed font-semibold">
-                  {p.description}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Driver Verification Process ── */}
-      <section className="bg-white py-20 md:py-28">
-        <div className="max-w-5xl mx-auto px-5 sm:px-6 space-y-12">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="space-y-4"
-          >
-            <motion.span
-              variants={fadeUp}
-              className="text-[10px] font-mono font-bold tracking-widest text-blue-600 uppercase"
-            >
-              Driver Standards
-            </motion.span>
-            <motion.h2
-              variants={fadeUp}
-              className="text-3xl sm:text-4xl font-black tracking-tighter text-zinc-900 leading-tight max-w-xl"
-            >
-              What every Rydr driver must pass before their first trip.
-            </motion.h2>
-            <motion.p
-              variants={fadeUp}
-              className="text-zinc-500 text-sm font-semibold leading-relaxed max-w-2xl"
-            >
-              Our onboarding process is intentionally rigorous. Not every applicant
-              makes it through — and that's exactly the point.
-            </motion.p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            variants={stagger}
-            className="space-y-4"
-          >
-            {driverStandards.map((s, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                className="flex gap-5 items-start bg-[#F8F8F8] border border-zinc-200 rounded-xl p-5 hover:border-zinc-300 transition-colors"
-              >
-                <span className="text-2xl font-black text-zinc-300 font-mono shrink-0 leading-none mt-0.5">
-                  {s.step}
-                </span>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-black text-zinc-900">{s.title}</h4>
-                  <p className="text-sm text-zinc-500 font-semibold leading-relaxed">{s.detail}</p>
-                </div>
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 ml-auto mt-0.5" />
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Night Safety ── */}
-      <section className="bg-[#111111] py-20 md:py-28">
-        <div className="max-w-5xl mx-auto px-5 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={stagger}
-              className="space-y-6"
-            >
-              <motion.span
-                variants={fadeUp}
-                className="text-[10px] font-mono font-bold tracking-widest text-blue-400 uppercase"
-              >
-                After Dark
-              </motion.span>
-              <motion.h2
-                variants={fadeUp}
-                className="text-3xl sm:text-4xl font-black tracking-tighter text-white leading-tight"
-              >
-                Late nights deserve extra care.
-              </motion.h2>
-              <motion.p
-                variants={fadeUp}
-                className="text-zinc-400 text-sm font-semibold leading-relaxed"
-              >
-                We know that trust matters most when the streets are quiet and the city
-                is dark. These are the extra protections we have in place specifically
-                for late-night trips.
-              </motion.p>
-
-              <motion.div variants={stagger} className="space-y-3">
-                {nightSafety.map((item, i) => (
-                  <motion.div
-                    key={i}
-                    variants={fadeUp}
-                    className="flex items-start gap-3"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-                    <span className="text-sm text-zinc-300 font-semibold">{item}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </motion.div>
-
-            {/* SOS Visual */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="flex justify-center lg:justify-end"
-            >
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 sm:p-10 w-full max-w-sm space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
-                    Emergency SOS
-                  </div>
-                  <div className="text-zinc-300 text-sm font-semibold">
-                    Tap and hold for 3 seconds
-                  </div>
-                </div>
-
-                {/* SOS Button */}
-                <div className="flex justify-center">
-                  <div className="relative w-32 h-32">
-                    <div className="absolute inset-0 rounded-full bg-rose-600/20 animate-ping" />
-                    <div className="absolute inset-2 rounded-full bg-rose-600/30 animate-pulse" />
-                    <button
-                      className="relative w-32 h-32 rounded-full bg-rose-600 hover:bg-rose-500 transition-colors flex items-center justify-center shadow-2xl border-4 border-rose-400/30 cursor-pointer"
-                      aria-label="Emergency SOS Button"
-                    >
-                      <span className="text-white text-2xl font-black tracking-tighter">SOS</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-zinc-800/60 rounded-xl p-3">
-                    <PhoneCall className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span className="text-xs text-zinc-300 font-semibold">
-                      Connects to Rydr Safety Team
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-zinc-800/60 rounded-xl p-3">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span className="text-xs text-zinc-300 font-semibold">
-                      Alerts your emergency contact
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 bg-zinc-800/60 rounded-xl p-3">
-                    <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="text-xs text-zinc-300 font-semibold">
-                      Shares live location with police
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+        {/* Clean Stats bar */}
+        <div className="grid grid-cols-3 gap-4 text-center border-y border-zinc-200/50 py-8">
+          <div className="space-y-1">
+            <span className="text-2xl font-black text-zinc-900 font-sans">100%</span>
+            <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Aadhaar Verified</p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-2xl font-black text-zinc-900 font-sans">&lt;4 min</span>
+            <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider">SOS Response</p>
+          </div>
+          <div className="space-y-1">
+            <span className="text-2xl font-black text-zinc-900 font-sans">1.2M+</span>
+            <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Safe Commutes</p>
           </div>
         </div>
-      </section>
 
-      {/* ── Safety Standards ── */}
-      <section className="bg-white border-t border-zinc-200 py-20 md:py-28">
-        <div className="max-w-5xl mx-auto px-5 sm:px-6 space-y-12">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center space-y-4"
-          >
-            <motion.span
-              variants={fadeUp}
-              className="text-[10px] font-mono font-bold tracking-widest text-blue-600 uppercase"
-            >
-              Our Standards
-            </motion.span>
-            <motion.h2
-              variants={fadeUp}
-              className="text-3xl sm:text-4xl font-black tracking-tighter text-zinc-900 leading-tight"
-            >
-              Safety numbers that speak for themselves.
-            </motion.h2>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid grid-cols-2 md:grid-cols-4 gap-5"
-          >
-            {[
-              { number: "100%", label: "Drivers Aadhaar verified", icon: Fingerprint, color: "text-blue-600" },
-              { number: "<4 min", label: "Average SOS response time", icon: Clock, color: "text-rose-600" },
-              { number: "1.2M+", label: "Safe trips completed", icon: ShieldCheck, color: "text-emerald-600" },
-              { number: "24/7", label: "Safety team on standby", icon: Eye, color: "text-purple-600" },
-            ].map((m, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                className="bg-[#F8F8F8] border border-zinc-200 rounded-2xl p-5 text-center space-y-3 hover:shadow-md transition-shadow"
-              >
-                <m.icon className={`w-5 h-5 mx-auto ${m.color}`} />
-                <div className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tighter">
-                  {m.number}
-                </div>
-                <div className="text-xs text-zinc-500 font-semibold leading-tight">{m.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── CTA ── */}
-      <section className="bg-[#F8F8F8] border-t border-zinc-200 py-16 md:py-20">
-        <div className="max-w-3xl mx-auto px-5 sm:px-6 text-center space-y-6">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-900 leading-tight"
-          >
-            Have a safety concern? We're here.
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-zinc-500 text-sm font-semibold"
-          >
-            Report an incident, share feedback, or contact our safety team directly.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center"
-          >
+        {/* Support CTA */}
+        <div className="text-center space-y-5">
+          <h2 className="text-lg sm:text-xl font-bold text-zinc-900">Have a safety question?</h2>
+          <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed max-w-md mx-auto">
+            Our safety operations team is always active. Report issues, submit ticket queries, or get direct safety advice.
+          </p>
+          <div className="flex gap-4 justify-center">
             <Link
               href="/help"
-              className="px-6 py-3 bg-black text-white text-sm font-bold rounded-xl hover:bg-zinc-800 transition-colors inline-flex items-center justify-center gap-2"
+              className="px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-2"
             >
-              Contact Safety Team <ArrowRight className="w-4 h-4" />
+              <span>Contact Safety Desk</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <Link
               href="/rider"
-              className="px-6 py-3 border border-zinc-300 text-zinc-900 text-sm font-bold rounded-xl hover:border-zinc-900 transition-colors inline-flex items-center justify-center gap-2"
+              className="px-5 py-3 bg-white hover:bg-zinc-50 border border-zinc-250 text-zinc-900 text-xs font-semibold rounded-xl transition-all shadow-3xs"
             >
-              Book a Safe Ride
+              <span>Book a Safe Ride</span>
             </Link>
-          </motion.div>
+          </div>
         </div>
-      </section>
+
+      </main>
 
       <Footer />
     </div>
