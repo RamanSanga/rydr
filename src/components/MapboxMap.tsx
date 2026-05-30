@@ -234,7 +234,7 @@ export default function MapboxMap({
             {/* Draw a grid-aligned curved path if endpoints are selected */}
             {pickupCoords && destinationCoords && (
               <path
-                d="M 120 280 C 180 180, 280 320, 360 120"
+                d="M 30% 70% C 45% 45%, 70% 80%, 80% 30%"
                 fill="none"
                 stroke="url(#routeGradient)"
                 strokeWidth="4"
@@ -244,7 +244,7 @@ export default function MapboxMap({
             )}
             {pickupCoords && destinationCoords && (
               <path
-                d="M 120 280 C 180 180, 280 320, 360 120"
+                d="M 30% 70% C 45% 45%, 70% 80%, 80% 30%"
                 fill="none"
                 stroke="#18181b"
                 strokeWidth="4.5"
@@ -269,7 +269,7 @@ export default function MapboxMap({
             {pickupCoords && (
               <div 
                 className="absolute flex flex-col items-center justify-center transition-all duration-300"
-                style={{ left: "120px", top: "280px", transform: "translate(-50%, -100%)" }}
+                style={{ left: "30%", top: "70%", transform: "translate(-50%, -100%)" }}
               >
                 <div className="bg-emerald-50 border border-emerald-250 px-2 py-1 rounded-lg shadow-3xs text-[9px] font-extrabold text-emerald-800 bg-white/95 backdrop-blur-xs mb-1 border-dashed">
                   Pickup: {pickupName.split(",")[0]}
@@ -287,7 +287,7 @@ export default function MapboxMap({
             {destinationCoords && (
               <div 
                 className="absolute flex flex-col items-center justify-center transition-all duration-300"
-                style={{ left: "360px", top: "120px", transform: "translate(-50%, -100%)" }}
+                style={{ left: "80%", top: "30%", transform: "translate(-50%, -100%)" }}
               >
                 <div className="bg-blue-50 border border-blue-250 px-2 py-1 rounded-lg shadow-3xs text-[9px] font-extrabold text-blue-800 bg-white/95 backdrop-blur-xs mb-1 border-dashed">
                   Drop: {destinationName.split(",")[0]}
@@ -301,6 +301,35 @@ export default function MapboxMap({
               </div>
             )}
             
+            {/* Mock Nearby Drivers */}
+            {pickupCoords && nearbyDrivers && nearbyDrivers.length > 0 && (
+              <>
+                {nearbyDrivers.map((driver, index) => {
+                  // Generate a pseudo-random offset based on the index to scatter drivers around pickup
+                  const offsetX = (index % 2 === 0 ? 1 : -1) * (15 + index * 5);
+                  const offsetY = (index % 3 === 0 ? 1 : -1) * (20 + index * 4);
+                  
+                  return (
+                    <div 
+                      key={driver.userId || index}
+                      className="absolute flex flex-col items-center justify-center transition-all duration-700"
+                      style={{ 
+                        left: `calc(30% + ${offsetX}px)`, 
+                        top: `calc(70% + ${offsetY}px)`, 
+                        transform: "translate(-50%, -50%)" 
+                      }}
+                    >
+                      <div className="w-7 h-7 rounded-full bg-zinc-900 border-2 border-white shadow-md flex items-center justify-center text-white ring-2 ring-zinc-900/20">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>
+                        </svg>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
             {/* Mock Nearby Driver Pins (Fallback) */}
             {nearbyDrivers && nearbyDrivers.length > 0 && !pickupCoords && !destinationCoords && nearbyDrivers.slice(0, 3).map((driver, idx) => {
               // Create pseudo-random offsets for fallback visualization

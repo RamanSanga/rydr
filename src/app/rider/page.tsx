@@ -105,7 +105,7 @@ export default function RiderDashboard() {
     }
   }, []);
 
-  // Poll for nearby drivers
+  // Poll for nearby drivers with optimized state updates
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -113,7 +113,16 @@ export default function RiderDashboard() {
       if (pickupCoords) {
         try {
           const response = await getNearbyDrivers(pickupCoords[1], pickupCoords[0]); // pass lat, lng
-          setNearbyDrivers(response.drivers);
+          
+          setNearbyDrivers(prev => {
+            // Only update state if drivers changed (prevents React from thrashing renders on MapboxMap and BookingCard)
+            const prevIds = prev.map(d => `${d.userId}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}`).join(',');
+            const newIds = response.drivers.map(d => `${d.userId}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}`).join(',');
+            if (prevIds !== newIds) {
+              return response.drivers;
+            }
+            return prev;
+          });
         } catch (err) {
           console.error("Failed to fetch nearby drivers", err);
         }
@@ -121,7 +130,7 @@ export default function RiderDashboard() {
     };
 
     fetchDrivers();
-    interval = setInterval(fetchDrivers, 10000);
+    interval = setInterval(fetchDrivers, 15000); // Poll every 15s instead of 10s
 
     return () => clearInterval(interval);
   }, [pickupCoords]);
@@ -234,7 +243,7 @@ export default function RiderDashboard() {
           </motion.h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 lg:gap-14 items-start">
           
           {/* Left Column: Booking & Map */}
           <div className="lg:col-span-7 flex flex-col space-y-6">
