@@ -318,18 +318,13 @@ export async function updateDriverLocation(latitude: number, longitude: number, 
 
 // 8. Get Nearby Online Drivers for Rider App
 export async function getNearbyDrivers(lat: number, lng: number) {
-  const { userId } = await auth();
-  // We can return nearby drivers even if not authed, but let's just return
   if (!lat || !lng) return [];
 
   // Fetch all online drivers (in a real app, use PostGIS, but for this demo, fetch all and calculate in memory)
   const onlineDrivers = await prisma.driverLocation.findMany({
     where: {
       isOnline: true,
-      // Ignore the rider themselves if they somehow have a driver account
-      NOT: {
-        userId: userId || undefined,
-      }
+      // Removed NOT: { userId } constraint so solo developers can test Rider+Driver on same account
     },
     include: {
       user: true,
@@ -338,6 +333,11 @@ export async function getNearbyDrivers(lat: number, lng: number) {
 
   // Calculate distance (Haversine formula approximation)
   const R = 6371; // Radius of the earth in km
+  const RADIUS_LIMIT_KM = 10;
+  
+  console.log("================================================");
+  console.log(`[RIDER SEARCH] Coordinates: Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`);
+  console.log(`[RIDER SEARCH] Found ${onlineDrivers.length} total online drivers globally.`);
   
   const driversWithDistance = onlineDrivers.map(driver => {
     const dLat = (driver.latitude - lat) * (Math.PI / 180);
@@ -349,12 +349,20 @@ export async function getNearbyDrivers(lat: number, lng: number) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
     const distanceKm = R * c;
     
+    console.log(`[DRIVER CHECK] Driver ${driver.user?.name || driver.userId} at Lat ${driver.latitude.toFixed(5)}, Lng ${driver.longitude.toFixed(5)} -> Distance: ${distanceKm.toFixed(2)} km`);
+
     return {
       ...driver,
       distanceKm,
     };
   });
 
+  // Filter by realistic radius limit (10 km)
+  const driversWithinRadius = driversWithDistance.filter(driver => driver.distanceKm <= RADIUS_LIMIT_KM);
+  
+  console.log(`[RIDER SEARCH] Drivers within ${RADIUS_LIMIT_KM}km radius limit: ${driversWithinRadius.length}`);
+  console.log("================================================");
+
   // Sort by closest and limit to top 5
-  return driversWithDistance.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
+  return driversWithinRadius.sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 5);
 }

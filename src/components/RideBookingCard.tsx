@@ -386,12 +386,14 @@ export default function RideBookingCard({
     e.preventDefault();
     if (!pValue || !dValue) return;
 
-    // Resolve coordinates if missing to ensure booking matches
-    const start: [number, number] = pCoords || [-122.4007, 37.7915];
-    const end: [number, number] = dCoords || [-122.4093, 37.7876];
-    
-    if (!pCoords) setPCoords(start);
-    if (!dCoords) setDCoords(end);
+    if (!pCoords || !dCoords) {
+      console.warn("Real GPS coordinates are required for both pickup and destination. Please select a valid location from the dropdown or allow location access.");
+      setSuggestionsError("Please select a valid location from the suggestions.");
+      return;
+    }
+
+    const start: [number, number] = pCoords;
+    const end: [number, number] = dCoords;
 
     // Compute route if not already done (e.g., typing-only flow)
     if (!distMiles) {

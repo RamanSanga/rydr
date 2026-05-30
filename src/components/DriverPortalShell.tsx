@@ -317,17 +317,8 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
             }
           },
           async (err) => {
-            console.warn("Geolocation error, using fallback location:", err);
-            try {
-              // Fallback to Connaught Place, New Delhi for testing
-              await updateDriverLocation(
-                28.6304,
-                77.2177,
-                availability === "Online"
-              );
-            } catch (fallbackErr) {
-              console.error("Failed to update driver fallback location:", fallbackErr);
-            }
+            console.warn("Geolocation error. Cannot update driver location without real GPS coordinates:", err);
+            // We do NOT use fallback coordinates anymore. Must be based on rider/driver actual location.
           },
           { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
         );
