@@ -92,26 +92,40 @@ export default function OnboardingPage() {
     checkState();
   }, []);
 
-  // Simulating File Uploads with Elegant Loading Micro-states
+  // Real file uploads to Cloudinary with interactive picker (Phase 2)
   const simulateFileUpload = (fileType: string) => {
-    setIsUploading(true);
-    setTimeout(() => {
-      setIsUploading(false);
-      const fakeUrl = `/uploads/${fileType}_demo.pdf`;
-      
-      // Rider Sets
-      if (fileType === "aadhaar") setAadhaarFile("Aadhaar_Card_Verified.pdf");
-      if (fileType === "selfie") setSelfieFile("Driver_Selfie_Verification.png");
-      
-      // Driver Sets
-      if (fileType === "dr_aadhaar") setDriverAadhaar("Aadhaar_Front_Back.pdf");
-      if (fileType === "dr_pan") setDriverPan("PAN_Card_Verified.pdf");
-      if (fileType === "dr_selfie") setDriverSelfie("Selfie_Live_Approved.png");
-      if (fileType === "dr_license") setDriverLicense("Driving_License_Front.pdf");
-      if (fileType === "dr_rc") setDriverRc("Vehicle_Registration_Certificate.pdf");
-      if (fileType === "dr_insurance") setDriverInsurance("Comprehensive_Insurance_Policy.pdf");
-      if (fileType === "dr_permit") setDriverPermit("Commercial_Permit_All_India.pdf");
-    }, 1200);
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,application/pdf";
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsUploading(true);
+      try {
+        const { uploadToCloudinary } = await import("@/lib/cloudinary");
+        const secureUrl = await uploadToCloudinary(file, fileType);
+        
+        // Rider Sets
+        if (fileType === "aadhaar") setAadhaarFile(secureUrl);
+        if (fileType === "selfie") setSelfieFile(secureUrl);
+        
+        // Driver Sets
+        if (fileType === "dr_aadhaar") setDriverAadhaar(secureUrl);
+        if (fileType === "dr_pan") setDriverPan(secureUrl);
+        if (fileType === "dr_selfie") setDriverSelfie(secureUrl);
+        if (fileType === "dr_license") setDriverLicense(secureUrl);
+        if (fileType === "dr_rc") setDriverRc(secureUrl);
+        if (fileType === "dr_insurance") setDriverInsurance(secureUrl);
+        if (fileType === "dr_permit") setDriverPermit(secureUrl);
+      } catch (err: any) {
+        console.error(err);
+        alert(err.message || "Failed to upload document.");
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    input.click();
   };
 
   // ── RIDER SUBMISSION ──

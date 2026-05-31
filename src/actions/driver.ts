@@ -181,37 +181,141 @@ export async function rejectRideAction(rideId: string) {
     throw new Error("Unauthorized: Please sign in first.");
   }
 
-  // Update Ride status to "Cancelled"
-  const ride = await prisma.ride.update({
+  const ride = await prisma.ride.findUnique({
+    where: { id: rideId },
+  });
+
+  if (!ride) throw new Error("Ride not found");
+
+  let updatedRide = ride;
+
+  if (ride.candidateDrivers) {
+    const candidateIds: string[] = JSON.parse(ride.candidateDrivers);
+    const nextIndex = ride.currentDriverIndex + 1;
+
+    if (nextIndex < candidateIds.length) {
+      // Offer to the next closest driver in sequence
+      const nextDriverId = candidateIds[nextIndex];
+      updatedRide = await prisma.ride.update({
+        where: { id: rideId },
+        data: {
+          driverId: nextDriverId,
+          currentDriverIndex: nextIndex,
+          offeredAt: new Date(),
+        },
+      });
+
+      // Notify the next driver instantly (Phase 5)
+      const { createNotification } = await import("./notification");
+      await createNotification(
+        nextDriverId,
+        "🚖 New Ride Request Offered!",
+        `New trip request near your coordinates. Vetted dispatch timer active: 15s.`,
+        "RIDE"
+      );
+
+      revalidatePath("/driver");
+      revalidatePath("/driver/rides");
+      revalidatePath("/rider");
+      revalidatePath("/rides");
+
+      return { success: true, advanced: true, ride: updatedRide };
+    }
+  }
+
+  // If no more candidate drivers are left, set the ride status to "Cancelled"
+  updatedRide = await prisma.ride.update({
     where: { id: rideId },
     data: {
       status: "Cancelled",
-      driverId: null, // Free it up in case we want to re-route later, but for now it's cancelled
+      driverId: null,
     },
   });
+
+  const { createNotification } = await import("./notification");
+  await createNotification(
+    ride.userId,
+    "🚖 No Drivers Match",
+    "We couldn't match any nearby drivers for your trip. Please request again.",
+    "RIDE"
+  );
 
   revalidatePath("/driver");
   revalidatePath("/driver/rides");
   revalidatePath("/rider");
   revalidatePath("/rides");
 
-  return { success: true, ride };
+  return { success: true, advanced: false, ride: updatedRide };
 }
 
-// 5. Complete an accepted ride
+// 5. Complete an accepted ride & transact passenger wallet fare deduction (Phase 7)
 export async function completeRideAction(rideId: string) {
   const { userId } = await auth();
   if (!userId) {
     throw new Error("Unauthorized: Please sign in first.");
   }
 
-  // Update Ride status to "Completed"
-  const ride = await prisma.ride.update({
+  const rideBefore = await prisma.ride.findUnique({
     where: { id: rideId },
-    data: {
-      status: "Completed",
-    },
   });
+
+  if (!rideBefore) throw new Error("Ride not found");
+  const fareAmount = rideBefore.fare || 150.00; // Vetted fallback fare
+
+  // Perform safe database transaction to complete trip and settle payment
+  await prisma.$transaction(async (tx) => {
+    // A. Complete the ride
+    await tx.ride.update({
+      where: { id: rideId },
+      data: {
+        status: "Completed",
+      },
+    });
+
+    // B. Deduct fare from passenger wallet
+    await tx.wallet.upsert({
+      where: { userId: rideBefore.userId },
+      update: {
+        balance: {
+          decrement: fareAmount,
+        },
+        transactions: {
+          create: {
+            amount: -fareAmount,
+            type: "FARE_DEDUCTION",
+            description: `Ride fare for Trip #${rideId.substring(0, 8).toUpperCase()}`,
+          },
+        },
+      },
+      create: {
+        userId: rideBefore.userId,
+        balance: -fareAmount,
+        transactions: {
+          create: {
+            amount: -fareAmount,
+            type: "FARE_DEDUCTION",
+            description: `Ride fare for Trip #${rideId.substring(0, 8).toUpperCase()}`,
+          },
+        },
+      },
+    });
+  });
+
+  // C. Send notifications to both Rider & Driver (Phase 5)
+  const { createNotification } = await import("./notification");
+  await createNotification(
+    rideBefore.userId,
+    "🚖 Trip Completed!",
+    `Thank you for riding with RYDR! ₹${fareAmount} has been deducted from your wallet.`,
+    "RIDE"
+  );
+
+  await createNotification(
+    userId,
+    "💰 Payout Credited!",
+    `Trip #${rideId.substring(0, 8).toUpperCase()} completed. ₹${fareAmount} added to your shift earnings.`,
+    "RIDE"
+  );
 
   revalidatePath("/driver");
   revalidatePath("/driver/rides");
@@ -219,7 +323,7 @@ export async function completeRideAction(rideId: string) {
   revalidatePath("/rider");
   revalidatePath("/rides");
 
-  return { success: true, ride };
+  return { success: true };
 }
 
 // 5.5 Update intermediate ride status

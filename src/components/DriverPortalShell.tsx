@@ -162,6 +162,26 @@ function RideTile({
   onUpdateStatus?: (status: string) => void;
   onComplete?: () => void;
 }) {
+  const [secondsLeft, setSecondsLeft] = useState(15);
+
+  useEffect(() => {
+    if (!onAccept || !onDecline) return;
+
+    // Start 15s countdown offer timer
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onDecline(); // decline automatically when hits 0 to offer to next candidate!
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [onAccept, onDecline]);
+
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.015)] hover:border-zinc-400 transition-all duration-200">
       <div className="flex items-center justify-between mb-4.5">
@@ -196,6 +216,18 @@ function RideTile({
           </div>
         </div>
       </div>
+
+      {onAccept && onDecline && (
+        <div className="mt-3.5 bg-amber-50 border border-amber-250 rounded-xl p-3 flex items-center justify-between shadow-3xs animate-pulse">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
+            <span className="text-[11px] font-bold text-amber-800">Incoming dispatch offer</span>
+          </div>
+          <span className="bg-amber-600 text-white font-mono font-black text-xs px-2.5 py-0.5 rounded shadow-2xs">
+            {secondsLeft}s remaining
+          </span>
+        </div>
+      )}
       
       <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-4.5">
         <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase">Payout</span>
@@ -216,9 +248,12 @@ function RideTile({
           {onAccept && (
             <button
               onClick={onAccept}
-              className="flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 shadow-sm"
+              className="flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 shadow-sm flex items-center justify-center space-x-1.5"
             >
-              Accept Trip
+              <span>Accept Trip</span>
+              <span className="bg-white/20 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+                {secondsLeft}s
+              </span>
             </button>
           )}
         </div>

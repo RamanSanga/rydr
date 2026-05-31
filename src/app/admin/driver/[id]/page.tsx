@@ -7,6 +7,72 @@ import { getDriverProfileById, reviewDriverAction } from "@/actions/onboarding";
 import { Loader2, ArrowLeft, CheckCircle2, XCircle, FileText, Calendar, ShieldCheck, MapPin, Phone, Mail, Award, AlertTriangle, Sparkles } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
+// Premium Document Preview component with Lightbox modal zoom (Phase 2)
+function DocumentPreview({ url, label }: { url?: string; label: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!url) return null;
+
+  const isPdf = url.includes(".pdf") || url.startsWith("data:application/pdf");
+  const isImage = url.startsWith("data:image") || url.startsWith("http") || url.includes(".png") || url.includes(".jpg") || url.includes(".jpeg");
+
+  return (
+    <div className="mt-3 bg-zinc-50 border border-zinc-200/80 rounded-2xl overflow-hidden shadow-inner group relative">
+      {isPdf ? (
+        <div className="relative">
+          <iframe src={url} className="w-full h-36 border-0 pointer-events-none" title={label} />
+          <button 
+            type="button" 
+            onClick={() => setExpanded(true)}
+            className="absolute inset-0 w-full h-full bg-black/0 hover:bg-black/30 transition-all flex items-center justify-center text-white opacity-0 hover:opacity-100 font-bold text-xs cursor-pointer gap-1.5 backdrop-blur-2xs"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Open PDF Document</span>
+          </button>
+        </div>
+      ) : isImage ? (
+        <div className="relative overflow-hidden cursor-pointer" onClick={() => setExpanded(true)}>
+          <img src={url} className="w-full h-36 object-cover group-hover:scale-102 transition-transform duration-200" alt={label} />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center text-white opacity-0 group-hover:opacity-100 font-bold text-[11px] backdrop-blur-2xs">
+            Inspect Image Zoom
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 text-center text-xs text-zinc-400 font-bold uppercase tracking-widest font-mono">
+          Simulated File: {url.substring(0, 16)}...
+        </div>
+      )}
+
+      {/* Expanded Lightbox Modal */}
+      {expanded && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-fade-in"
+          onClick={() => setExpanded(false)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[85vh] w-full bg-white rounded-3xl overflow-hidden shadow-2xl p-3 flex flex-col justify-between animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="overflow-auto max-h-[80vh] flex items-center justify-center">
+              {isPdf ? (
+                <iframe src={url} className="w-full h-[75vh] border-0" title={label} />
+              ) : (
+                <img src={url} className="w-full h-auto max-h-[75vh] object-contain rounded-2xl" alt={label} />
+              )}
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setExpanded(false)}
+              className="absolute top-4 right-4 bg-zinc-900 hover:bg-zinc-850 text-white p-2 rounded-full cursor-pointer shadow-md transition-all font-bold text-xs flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDriverReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
@@ -162,8 +228,9 @@ export default function AdminDriverReviewPage({ params }: { params: Promise<{ id
                         <p className="text-[9.5px] text-zinc-400 font-mono mt-0.5 uppercase tracking-wide">ID Linked: 12-digit matched</p>
                       </div>
                     </div>
+                    <DocumentPreview url={profile?.aadhaarUrl} label="Aadhaar Card" />
                   </div>
-                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono">FILE: {profile?.aadhaarUrl}</span>
+                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono truncate">FILE: {profile?.aadhaarUrl}</span>
                 </div>
 
                 {/* PAN Preview Card */}
@@ -182,8 +249,9 @@ export default function AdminDriverReviewPage({ params }: { params: Promise<{ id
                         <p className="text-[9.5px] text-zinc-400 font-mono mt-0.5 uppercase tracking-wide">Status: Active Card</p>
                       </div>
                     </div>
+                    <DocumentPreview url={profile?.panUrl} label="PAN Card" />
                   </div>
-                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono">FILE: {profile?.panUrl}</span>
+                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono truncate">FILE: {profile?.panUrl}</span>
                 </div>
 
                 {/* Driving License Preview */}
@@ -202,8 +270,9 @@ export default function AdminDriverReviewPage({ params }: { params: Promise<{ id
                         <p className="text-[9.5px] text-zinc-400 font-mono mt-0.5 uppercase tracking-wide">Expires: {profile?.licenseExpiry}</p>
                       </div>
                     </div>
+                    <DocumentPreview url={profile?.licenseUrl} label="Driving License" />
                   </div>
-                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono">FILE: {profile?.licenseUrl}</span>
+                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono truncate">FILE: {profile?.licenseUrl}</span>
                 </div>
 
                 {/* Vehicle RC Preview */}
@@ -222,8 +291,9 @@ export default function AdminDriverReviewPage({ params }: { params: Promise<{ id
                         <p className="text-[9.5px] text-zinc-400 font-mono mt-0.5 uppercase tracking-wide">No: {profile?.vehicleNumber}</p>
                       </div>
                     </div>
+                    <DocumentPreview url={profile?.rcUrl} label="Registration Certificate" />
                   </div>
-                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono">FILE: {profile?.rcUrl}</span>
+                  <span className="text-[10px] text-zinc-400 font-semibold block mt-4 font-mono truncate">FILE: {profile?.rcUrl}</span>
                 </div>
 
               </div>

@@ -7,8 +7,12 @@ import DriverSection from "@/components/DriverSection";
 import Testimonials from "@/components/Testimonials";
 import AppExperience from "@/components/AppExperience";
 import Footer from "@/components/Footer";
+import { fetchActivePromosAction } from "@/actions/promo";
+import PromoBanners from "@/components/PromoBanners";
 
-export default function Home() {
+export default async function Home() {
+  const activePromos = await fetchActivePromosAction();
+
   return (
     <main className="relative min-h-screen bg-white text-[#111111] antialiased overflow-hidden select-none">
       {/* Global subtle radial glow for structural lighting (Blue Functional Accent) */}
@@ -20,6 +24,9 @@ export default function Home() {
       <div className="relative z-10">
         {/* 1. Hero Block (Headline + Booking Card + Live Stats + GPS Visual Map) */}
         <Herobar />
+
+        {/* Phase 8: Promo Discovery Strip */}
+        <PromoBanners promos={activePromos} />
 
         {/* 2. Mobility Suite (2 Featured + 4 Supporting Grid Hierarchy) */}
         <Services />

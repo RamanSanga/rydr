@@ -4,11 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getOnboardingState, updateRiderProfile, updateDriverProfile } from "@/actions/onboarding";
+import { fetchUserRatingStats } from "@/actions/review";
+import { getOrCreateWalletAction, addMoneyAction } from "@/actions/wallet";
+import { fetchUserReferralStatsAction, applyReferralCodeAction } from "@/actions/referral";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import { User, Phone, Mail, ShieldCheck, Sparkles, Thermometer, VolumeX, CreditCard, Check, ChevronRight, Loader2, FileText, AlertTriangle, Briefcase, Plane, Activity, MapPin } from "lucide-react";
+import { User, Phone, Mail, ShieldCheck, Sparkles, Thermometer, VolumeX, CreditCard, Check, ChevronRight, Loader2, FileText, AlertTriangle, Briefcase, Plane, Activity, MapPin, Star, Copy, Plus, Gift, Share2, History } from "lucide-react";
 
-type ProfileTab = "details" | "documents" | "emergency" | "preferences";
+type ProfileTab = "details" | "documents" | "wallet" | "referrals" | "emergency" | "preferences";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -38,6 +41,27 @@ export default function ProfilePage() {
   const [licenseNumber, setLicenseNumber] = useState("");
 
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+
+  // ── Extended Feature States (Phases 1, 7, 9) ──
+  const [ratingStats, setRatingStats] = useState<{ averageRating: number; totalRatings: number; recentReviews: any[] }>({
+    averageRating: 5.0,
+    totalRatings: 0,
+    recentReviews: [],
+  });
+  
+  const [wallet, setWallet] = useState<any>(null);
+  const [topupAmount, setTopupAmount] = useState("500");
+  const [topupLoading, setTopupLoading] = useState(false);
+  
+  const [referralStats, setReferralStats] = useState({
+    referralCode: "",
+    totalReferrals: 0,
+    totalRewards: 0,
+  });
+  const [referralInput, setReferralInput] = useState("");
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralMessage, setReferralMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -77,6 +101,19 @@ export default function ProfilePage() {
           setLicenseNumber(profile.licenseNumber || "");
           setVerificationStatus(profile.verificationStatus || "Pending");
         }
+
+        // Fetch dynamic reviews and rating aggregation (Phase 1)
+        const ratings = await fetchUserRatingStats(state.role as "rider" | "driver");
+        setRatingStats(ratings);
+
+        // Fetch wallet status (Phase 7)
+        const userWallet = await getOrCreateWalletAction();
+        setWallet(userWallet);
+
+        // Fetch referral codes and invite stats (Phase 9)
+        const refs = await fetchUserReferralStatsAction();
+        setReferralStats(refs);
+
       } catch (err) {
         console.error("Failed to load profile details", err);
       } finally {
@@ -121,6 +158,71 @@ export default function ProfilePage() {
     }
   };
 
+  // Handle Wallet Top Up (Phase 7)
+  const handleTopup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsedAmount = parseFloat(topupAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert("Please enter a valid amount to load.");
+      return;
+    }
+
+    setTopupLoading(true);
+    try {
+      const response = await addMoneyAction(parsedAmount);
+      if (response.success) {
+        const userWallet = await getOrCreateWalletAction();
+        setWallet(userWallet);
+        alert(`₹${parsedAmount} successfully added to your wallet!`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Top up failed. Please try again.");
+    } finally {
+      setTopupLoading(false);
+    }
+  };
+
+  // Handle Claiming Referral Code (Phase 9)
+  const handleClaimReferral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!referralInput.trim()) return;
+
+    setReferralLoading(true);
+    setReferralMessage(null);
+    try {
+      const response = await applyReferralCodeAction(referralInput.trim());
+      if (response.success) {
+        setReferralMessage({
+          type: "success",
+          text: `🎉 Referral code applied! ₹${response.reward} has been credited to your wallet.`,
+        });
+        setReferralInput("");
+        
+        // Refresh wallet and referral metrics
+        const userWallet = await getOrCreateWalletAction();
+        setWallet(userWallet);
+
+        const refs = await fetchUserReferralStatsAction();
+        setReferralStats(refs);
+      }
+    } catch (err: any) {
+      setReferralMessage({
+        type: "error",
+        text: err.message || "Failed to apply referral code.",
+      });
+    } finally {
+      setReferralLoading(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (!referralStats.referralCode) return;
+    navigator.clipboard.writeText(referralStats.referralCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center space-y-4">
@@ -133,6 +235,8 @@ export default function ProfilePage() {
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: "details", label: "Profile Details" },
     { id: "documents", label: "Verification & Docs" },
+    { id: "wallet", label: "Wallet" },
+    { id: "referrals", label: "Refer & Earn" },
     { id: "emergency", label: role === "rider" ? "Emergency Relays" : "Vehicle Specs" },
     { id: "preferences", label: role === "rider" ? "Comfort Presets" : "Account Settings" },
   ];
@@ -156,7 +260,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Controls Bar */}
-        <div className="flex space-x-1.5 bg-zinc-900/5 p-1 rounded-full max-w-max">
+        <div className="flex flex-wrap gap-1.5 bg-zinc-900/5 p-1 rounded-3xl max-w-max">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -177,8 +281,11 @@ export default function ProfilePage() {
           {/* Left Column: Profile Card Overview */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white border border-zinc-200/60 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.01)] text-center flex flex-col items-center space-y-5">
-              <div className="w-18 h-18 rounded-full bg-zinc-900 border border-zinc-200 flex items-center justify-center text-white font-black text-xl shadow-md uppercase">
+              <div className="w-18 h-18 rounded-full bg-zinc-950 border border-zinc-200 flex items-center justify-center text-white font-black text-xl shadow-md uppercase relative">
                 {fullName.substring(0, 2)}
+                <div className="absolute -bottom-1 -right-1 bg-zinc-950 border border-white text-amber-500 p-1.5 rounded-full shadow-md flex items-center justify-center">
+                  <Star className="w-3.5 h-3.5 fill-current" />
+                </div>
               </div>
               
               <div className="space-y-1">
@@ -186,6 +293,17 @@ export default function ProfilePage() {
                 <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block font-bold">
                   {role === "rider" ? "Premium Commuter" : "Verified Driver"}
                 </span>
+
+                {/* rolling rating aggregates */}
+                <div className="flex items-center justify-center space-x-1.5 pt-1.5">
+                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
+                  <span className="text-xs font-black text-zinc-850">
+                    {ratingStats.averageRating.toFixed(2)} ★
+                  </span>
+                  <span className="text-[10.5px] text-zinc-400 font-bold uppercase">
+                    ({ratingStats.totalRatings} Reviews)
+                  </span>
+                </div>
               </div>
 
               {/* Dynamic Status Pill */}
@@ -216,8 +334,10 @@ export default function ProfilePage() {
               {/* Account Quick Specs */}
               <div className="w-full text-left space-y-3 text-[11.5px] font-bold text-zinc-550">
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-400">Default Payout</span>
-                  <span className="text-zinc-900 font-extrabold font-mono">UPI / Instant</span>
+                  <span className="text-zinc-400">Wallet Balance</span>
+                  <span className="text-zinc-900 font-extrabold font-mono text-xs">
+                    ₹{wallet?.balance?.toFixed(2) || "0.00"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-zinc-400">Eco Commutes</span>
@@ -232,9 +352,9 @@ export default function ProfilePage() {
 
             {/* Quick Demo approve trigger capsule for testing */}
             {role === "driver" && verificationStatus !== "Approved" && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4.5 text-xs text-amber-900">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4.5 text-xs text-amber-900 shadow-3xs">
                 <p className="font-bold mb-1 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <Sparkles className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
                   <span>Onboarding Compliance Demo</span>
                 </p>
                 <p className="text-[11px] leading-relaxed">
@@ -331,7 +451,7 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
                       <button
                         type="submit"
-                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all flex items-center space-x-1.5 shadow-sm"
+                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
                       >
                         <ShieldCheck className="w-4 h-4" />
                         <span>Save Profile Details</span>
@@ -348,14 +468,14 @@ export default function ProfilePage() {
                 </motion.div>
               )}
 
-              {/* TAB 2: Verification & Docs */}
+              {/* TAB 2: Verification & Docs & Recent Reviews */}
               {activeTab === "documents" && (
                 <motion.div
                   key="documents"
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
-                  className="space-y-6"
+                  className="space-y-8"
                 >
                   <div className="pb-3 border-b border-zinc-100">
                     <h3 className="text-base font-black text-zinc-950">Compliance Documents</h3>
@@ -430,10 +550,311 @@ export default function ProfilePage() {
                       </>
                     )}
                   </div>
+
+                  {/* Phase 1: Recent Reviews Section */}
+                  <div className="pt-4">
+                    <div className="pb-3 border-b border-zinc-100 mb-4">
+                      <h3 className="text-base font-black text-zinc-950 flex items-center space-x-2">
+                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                        <span>Recent Trip Feedback</span>
+                      </h3>
+                      <p className="text-[12px] text-zinc-450 font-semibold mt-0.5">Vetted ride ratings and commentary from your recent bookings.</p>
+                    </div>
+
+                    {ratingStats.recentReviews.length > 0 ? (
+                      <div className="space-y-3.5">
+                        {ratingStats.recentReviews.map((item) => (
+                          <div key={item.id} className="border border-zinc-150 rounded-2xl p-4 bg-zinc-50/30 flex flex-col space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-1 text-amber-500">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-3.5 h-3.5 ${
+                                      i < item.rating ? "fill-current" : "opacity-25"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-zinc-400">
+                                {new Date(item.createdAt).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-[12.5px] text-zinc-700 italic">"{item.comment}"</p>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                              📍 Route: {item.route}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-zinc-50/50 rounded-2xl border border-zinc-200/50">
+                        <Star className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">No ratings recorded yet</p>
+                        <p className="text-[11px] text-zinc-400 font-semibold mt-1">Complete your first trip to unlock rolling reviews!</p>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
 
-              {/* TAB 3: Emergency (Rider) / Vehicle specs (Driver) */}
+              {/* TAB 3: Interactive Wallet (Phase 7) */}
+              {activeTab === "wallet" && (
+                <motion.div
+                  key="wallet"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="space-y-6"
+                >
+                  <div className="pb-3 border-b border-zinc-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-zinc-950">My Digital Wallet</h3>
+                      <p className="text-[12px] text-zinc-450 font-semibold mt-0.5">Top up balances, claim referral bonuses, and track fare transactions.</p>
+                    </div>
+                    <CreditCard className="w-5 h-5 text-zinc-400" />
+                  </div>
+
+                  {/* Wallet Balance Board */}
+                  <div className="bg-zinc-950 text-white rounded-3xl p-6.5 relative overflow-hidden shadow-md">
+                    <div className="absolute top-0 right-0 w-36 h-36 bg-radial-gradient from-white/[0.08] to-transparent pointer-events-none rounded-full" />
+                    
+                    <span className="text-[10px] font-mono tracking-widest text-zinc-450 font-extrabold uppercase">Available Balance</span>
+                    <h2 className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight font-mono mt-1.5 mb-1">
+                      ₹{wallet?.balance?.toFixed(2) || "0.00"}
+                    </h2>
+                    <p className="text-[10.5px] text-zinc-400 font-bold uppercase tracking-wider">INR Ledgers • Cashless Dispatches Enabled</p>
+                  </div>
+
+                  {/* Top-up Form */}
+                  <form onSubmit={handleTopup} className="space-y-3.5 bg-zinc-50 border border-zinc-200/80 rounded-2xl p-5 shadow-3xs">
+                    <h4 className="text-[13px] font-black text-zinc-900 flex items-center gap-1.5">
+                      <Plus className="w-4 h-4 text-zinc-950" />
+                      <span>Add Money to Wallet</span>
+                    </h4>
+
+                    <div className="flex gap-2">
+                      <div className="bg-white border border-zinc-200 rounded-xl px-4 py-3 flex-1 flex items-center focus-within:border-zinc-400 transition-colors">
+                        <span className="text-sm font-bold text-zinc-500 mr-1.5">₹</span>
+                        <input
+                          type="number"
+                          placeholder="Enter load amount"
+                          value={topupAmount}
+                          onChange={(e) => setTopupAmount(e.target.value)}
+                          className="bg-transparent border-0 outline-0 p-0 text-sm text-zinc-900 placeholder-zinc-400 focus:ring-0 font-bold w-full font-mono"
+                        />
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        disabled={topupLoading}
+                        className="px-6 py-3 bg-zinc-950 hover:bg-zinc-850 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow active:scale-97 transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer"
+                      >
+                        {topupLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <span>Load Funds</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Pre-fill Preset Buttons */}
+                    <div className="flex gap-2">
+                      {["100", "500", "1000"].map((preset) => (
+                        <button
+                          type="button"
+                          key={preset}
+                          onClick={() => setTopupAmount(preset)}
+                          className={`py-1.5 px-3.5 border rounded-lg text-[11px] font-black tracking-wide font-mono cursor-pointer transition-all ${
+                            topupAmount === preset
+                              ? "bg-zinc-900 border-zinc-900 text-white"
+                              : "bg-white border-zinc-200 text-zinc-650 hover:border-zinc-400"
+                          }`}
+                        >
+                          +₹{preset}
+                        </button>
+                      ))}
+                    </div>
+                  </form>
+
+                  {/* Transaction Ledger Table */}
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-[13px] font-black text-zinc-900 flex items-center gap-1.5 mb-2">
+                      <History className="w-4 h-4 text-zinc-950" />
+                      <span>Ledger Transactions</span>
+                    </h4>
+
+                    {wallet?.transactions && wallet.transactions.length > 0 ? (
+                      <div className="border border-zinc-200 rounded-2xl overflow-hidden shadow-3xs max-h-[300px] overflow-y-auto">
+                        <table className="w-full text-left text-xs divide-y divide-zinc-200">
+                          <thead className="bg-zinc-50 text-zinc-400 font-bold uppercase tracking-wider text-[10px] sticky top-0">
+                            <tr>
+                              <th className="px-4 py-3">Type</th>
+                              <th className="px-4 py-3">Date</th>
+                              <th className="px-4 py-3">Details</th>
+                              <th className="px-4 py-3 text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200 bg-white font-semibold">
+                            {wallet.transactions.map((tx: any) => {
+                              const isCredited = tx.amount > 0;
+                              return (
+                                <tr key={tx.id} className="hover:bg-zinc-50/40">
+                                  <td className="px-4 py-3.5">
+                                    <span className={`px-2 py-0.5 rounded text-[9.5px] font-bold tracking-wide uppercase ${
+                                      tx.type === "TOPUP" 
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50"
+                                        : tx.type === "REFERRAL_REWARD"
+                                        ? "bg-purple-50 text-purple-700 border border-purple-200/50"
+                                        : "bg-red-50 text-red-700 border border-red-200/50"
+                                    }`}>
+                                      {tx.type}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3.5 text-zinc-450 font-mono text-[10.5px]">
+                                    {new Date(tx.createdAt).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                    })}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-zinc-700 truncate max-w-[150px]">{tx.description}</td>
+                                  <td className={`px-4 py-3.5 text-right font-bold font-mono text-[12px] ${
+                                    isCredited ? "text-emerald-600" : "text-red-600"
+                                  }`}>
+                                    {isCredited ? "+" : ""}₹{Math.abs(tx.amount).toFixed(2)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 border border-dashed border-zinc-200 rounded-2xl bg-zinc-50/20">
+                        <History className="w-6 h-6 text-zinc-300 mx-auto mb-1.5" />
+                        <p className="text-[11px] font-bold text-zinc-450 uppercase tracking-widest">No transactions log found</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* TAB 4: Referrals and Rewards (Phase 9) */}
+              {activeTab === "referrals" && (
+                <motion.div
+                  key="referrals"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="space-y-6"
+                >
+                  <div className="pb-3 border-b border-zinc-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-zinc-950">Refer & Earn Rewards</h3>
+                      <p className="text-[12px] text-zinc-450 font-semibold mt-0.5">Invite friends to RYDR. Both users receive wallet rewards on sign-up.</p>
+                    </div>
+                    <Gift className="w-5 h-5 text-zinc-400" />
+                  </div>
+
+                  {/* Referral Code Board */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Share Invitation Code Card */}
+                    <div className="bg-zinc-50 border border-zinc-200 rounded-3xl p-5 flex flex-col justify-between shadow-3xs">
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">My Invitation Code</span>
+                        <h3 className="text-lg font-black font-mono tracking-tight text-zinc-900 uppercase">
+                          {referralStats.referralCode || "Generating invite..."}
+                        </h3>
+                        <p className="text-[10.5px] text-zinc-500 font-semibold leading-relaxed">
+                          Share this invite code with friends. Once they enter it, you both receive ₹100 instantly!
+                        </p>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={handleCopyCode}
+                        className="mt-4 py-2.5 w-full bg-zinc-950 hover:bg-zinc-850 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 shadow-2xs hover:shadow cursor-pointer"
+                      >
+                        {copiedCode ? (
+                          <>
+                            <Check className="w-4 h-4 stroke-[3]" />
+                            <span>Copied to Clipboard!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span>Copy Invitation Code</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Referral Metrics Stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex flex-col justify-center text-center shadow-3xs">
+                        <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider">Friends Joined</span>
+                        <h2 className="text-2xl font-black text-zinc-900 mt-1">{referralStats.totalReferrals}</h2>
+                        <span className="text-[9px] text-zinc-450 font-bold block mt-0.5">COMMUNITIES</span>
+                      </div>
+                      <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-4 flex flex-col justify-center text-center shadow-3xs">
+                        <span className="text-[9.5px] font-bold text-emerald-700 uppercase tracking-wider">Earnings Earned</span>
+                        <h2 className="text-2xl font-black text-emerald-600 font-mono mt-1">₹{referralStats.totalRewards}</h2>
+                        <span className="text-[9px] text-emerald-500 font-bold block mt-0.5">CREDITED BALANCE</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Claim Invitation Code Box */}
+                  <form onSubmit={handleClaimReferral} className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-5 shadow-3xs space-y-3">
+                    <div>
+                      <h4 className="text-[13px] font-black text-zinc-900">Have an Invitation Code?</h4>
+                      <p className="text-[11px] text-zinc-450 font-semibold mt-0.5">Claim ₹100 welcome reward immediately inside your wallet.</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. RYDR-RAMAN-123"
+                        value={referralInput}
+                        onChange={(e) => setReferralInput(e.target.value)}
+                        className="bg-white border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-800 placeholder-zinc-400 focus:ring-0 font-bold w-full uppercase font-mono"
+                      />
+                      
+                      <button
+                        type="submit"
+                        disabled={referralLoading || !referralInput.trim()}
+                        className="px-6 py-3 bg-zinc-950 hover:bg-zinc-850 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm active:scale-97 transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer"
+                      >
+                        {referralLoading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <span>Claim Reward</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Alert Message for claim feedbacks */}
+                    {referralMessage && (
+                      <div className={`p-3 rounded-xl border text-[11.5px] font-bold leading-normal flex items-start space-x-2 animate-fade-in ${
+                        referralMessage.type === "success" 
+                          ? "bg-emerald-50/50 border-emerald-200 text-emerald-800" 
+                          : "bg-red-50/50 border-red-200 text-red-800"
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
+                          referralMessage.type === "success" ? "bg-emerald-500" : "bg-red-500"
+                        }`} />
+                        <span>{referralMessage.text}</span>
+                      </div>
+                    )}
+                  </form>
+                </motion.div>
+              )}
+
+              {/* TAB 5: Emergency (Rider) / Vehicle specs (Driver) */}
               {activeTab === "emergency" && (
                 <motion.div
                   key="emergency"
@@ -492,7 +913,7 @@ export default function ProfilePage() {
 
                       <button
                         type="submit"
-                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm"
+                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm cursor-pointer"
                       >
                         Save Emergency Contact
                       </button>
@@ -546,7 +967,7 @@ export default function ProfilePage() {
 
                       <button
                         type="submit"
-                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm"
+                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm cursor-pointer"
                       >
                         Save Vehicle Specifications
                       </button>
@@ -555,7 +976,7 @@ export default function ProfilePage() {
                 </motion.div>
               )}
 
-              {/* TAB 4: Comfort Presets (Rider) / Settings (Driver) */}
+              {/* TAB 6: Comfort Presets (Rider) / Settings (Driver) */}
               {activeTab === "preferences" && (
                 <motion.div
                   key="preferences"
@@ -577,7 +998,7 @@ export default function ProfilePage() {
                             <VolumeX className="w-4.5 h-4.5 text-zinc-550" />
                             <div>
                               <h4 className="text-[13px] font-extrabold text-zinc-900 leading-tight">Default Quiet Mode</h4>
-                              <p className="text-[11px] text-zinc-400 font-semibold mt-0.5">Avoid friendly chat unless requested</p>
+                              <p className="text-[11px] text-zinc-450 font-semibold mt-0.5">Avoid friendly chat unless requested</p>
                             </div>
                           </div>
                           <button
@@ -638,7 +1059,7 @@ export default function ProfilePage() {
 
                       <button
                         type="submit"
-                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm"
+                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm cursor-pointer"
                       >
                         Save Comfort Preferences
                       </button>

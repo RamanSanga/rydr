@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { Menu, X, HelpCircle, Shield, Car, Info, User, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -97,15 +98,18 @@ export default function Navbar() {
           </Link>
 
           {/* User Sign In/Up or Clerk Profile */}
-          <div className="flex items-center pl-4 border-l border-zinc-200/60">
+          <div className="flex items-center space-x-4 pl-4 border-l border-zinc-200/60">
             {isLoaded ? (
               isSignedIn ? (
-                <div className="flex items-center space-x-3 bg-zinc-900/5 hover:bg-zinc-900/10 px-3 py-1.5 rounded-full border border-zinc-200/30 transition-all duration-200 shadow-2xs">
-                  <span className="text-[11.5px] font-bold text-zinc-800 pr-1 pl-1">Account</span>
-                  <div className="scale-95 origin-center">
-                    <UserButton />
+                <>
+                  <NotificationDropdown />
+                  <div className="flex items-center space-x-3 bg-zinc-900/5 hover:bg-zinc-900/10 px-3 py-1.5 rounded-full border border-zinc-200/30 transition-all duration-200 shadow-2xs">
+                    <span className="text-[11.5px] font-bold text-zinc-800 pr-1 pl-1">Account</span>
+                    <div className="scale-95 origin-center">
+                      <UserButton />
+                    </div>
                   </div>
-                </div>
+                </>
               ) : (
                 <div className="flex items-center space-x-2">
                   <Link
@@ -131,13 +135,16 @@ export default function Navbar() {
         {/* Mobile Hamburger menu trigger */}
         <div className="lg:hidden flex items-center space-x-3">
           {isLoaded && isSignedIn && (
-            <div className="scale-95">
-              <UserButton />
-            </div>
+            <>
+              <NotificationDropdown />
+              <div className="scale-95">
+                <UserButton />
+              </div>
+            </>
           )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-zinc-500 hover:text-zinc-950 rounded-full hover:bg-zinc-100 transition-all cursor-pointer"
+            className="p-2 text-zinc-550 hover:text-zinc-950 rounded-full hover:bg-zinc-100 transition-all cursor-pointer"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-5.5 h-5.5" /> : <Menu className="w-5.5 h-5.5" />}

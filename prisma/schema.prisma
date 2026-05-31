@@ -18,6 +18,15 @@ model User {
   driverLocation DriverLocation?
   riderProfile   RiderProfile?
   driverProfile  DriverProfile?
+
+  // Extended Upgrades
+  referralCode    String?         @unique // Unique referral code (e.g. RYDR-RAMAN-123)
+  reviewsAsRider  Review[]        @relation("RiderReviews")
+  reviewsAsDriver Review[]        @relation("DriverReviews")
+  notifications   Notification[]
+  wallet          Wallet?
+  referralsSent   Referral[]      @relation("Referrer")
+  referralsRecv   Referral?       @relation("ReferredUser")
 }
 
 model RiderProfile {
@@ -57,6 +66,7 @@ model DriverProfile {
   rcUrl              String?
   insuranceUrl       String?
   permitUrl          String?
+  vehiclePhotosUrl   String?  // Real document storage field
   verificationStatus String   @default("Pending") // "Pending" | "Under Review" | "Approved" | "Rejected"
   rejectionReason    String?
   onboarded          Boolean  @default(false)
@@ -76,6 +86,15 @@ model Ride {
   driverId    String?
   driver      User?    @relation("DriverRides", fields: [driverId], references: [id])
   createdAt   DateTime @default(now())
+
+  // Extended Upgrades
+  scheduledAt        DateTime?
+  candidateDrivers   String?       // JSON list of nearby driver user IDs
+  currentDriverIndex Int           @default(0)
+  offeredAt          DateTime?
+  reviews            Review[]
+  promoCodeId        String?
+  promoCode          PromoCode?    @relation(fields: [promoCodeId], references: [id])
 }
 
 model SavedLocation {
@@ -97,4 +116,81 @@ model DriverLocation {
   longitude Float
   isOnline  Boolean  @default(false)
   updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rideId     String
+  ride       Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  riderId    String
+  rider      User     @relation("RiderReviews", fields: [riderId], references: [id], onDelete: Cascade)
+  driverId   String
+  driver     User     @relation("DriverReviews", fields: [driverId], references: [id], onDelete: Cascade)
+  reviewerId String   // User ID of the reviewer (either riderId or driverId)
+  rating     Int      // 1-5 stars
+  review     String?  // Optional text comment
+  createdAt  DateTime @default(now())
+
+  @@unique([rideId, reviewerId])
+  @@index([rideId])
+  @@index([riderId])
+  @@index([driverId])
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance      Float         @default(0.0) // Balance in INR
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount      Float    // Positive for topups/rewards, negative for deductions
+  type        String   // "TOPUP" | "FARE_DEDUCTION" | "REFERRAL_REWARD"
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([walletId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // "RIDE" | "VERIFICATION" | "PROMO" | "REFERRAL"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PromoCode {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  discountType  String   // "flat" | "percentage"
+  discountValue Float
+  expiryDate    DateTime
+  active        Boolean  @default(true)
+  rides         Ride[]
+  createdAt     DateTime @default(now())
+}
+
+model Referral {
+  id             String   @id @default(cuid())
+  referrerId     String
+  referrer       User     @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String   @unique
+  referredUser   User     @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  rewardAmount   Float
+  createdAt      DateTime @default(now())
+
+  @@index([referrerId])
 }
