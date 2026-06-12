@@ -24,8 +24,20 @@ export async function getOnboardingState() {
   const roleSelected = !!user.role;
   let onboarded = false;
 
-  if (user.role === "rider" && user.riderProfile) {
-    onboarded = user.riderProfile.onboarded;
+  if (user.role === "rider") {
+    onboarded = true;
+    // Repair/Auto-create RiderProfile if missing for existing database users
+    if (!user.riderProfile) {
+      await prisma.riderProfile.create({
+        data: {
+          userId,
+          onboarded: true,
+          phone: "+91 98765 43210",
+          dob: "01/01/1990",
+          language: "English",
+        },
+      });
+    }
   } else if (user.role === "driver" && user.driverProfile) {
     onboarded = user.driverProfile.onboarded;
   }

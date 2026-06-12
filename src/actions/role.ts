@@ -29,5 +29,20 @@ export async function selectUserRole(role: "rider" | "driver") {
     create: { id: userId, name, email, role },
   });
 
+  // Auto-provision onboarded RiderProfile for passengers
+  if (role === "rider") {
+    await prisma.riderProfile.upsert({
+      where: { userId },
+      update: { onboarded: true },
+      create: {
+        userId,
+        onboarded: true,
+        phone: "+91 98765 43210",
+        dob: "01/01/1990",
+        language: "English",
+      },
+    });
+  }
+
   return { success: true };
 }

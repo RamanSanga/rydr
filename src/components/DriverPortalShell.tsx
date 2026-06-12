@@ -302,10 +302,6 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState(driverGreetings[0]);
 
-  // Temporary Debug State styled beautifully
-  const [debugLat, setDebugLat] = useState<number | null>(null);
-  const [debugLng, setDebugLng] = useState<number | null>(null);
-  const [debugLastUpdated, setDebugLastUpdated] = useState<string | null>(null);
 
   // Reactive operational queues loaded from PostgreSQL DB actions
   const [requests, setRequests] = useState<any[]>([]);
@@ -419,9 +415,6 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             try {
-              setDebugLat(position.coords.latitude);
-              setDebugLng(position.coords.longitude);
-              setDebugLastUpdated(new Date().toLocaleTimeString());
               await updateDriverLocation(
                 position.coords.latitude,
                 position.coords.longitude,
@@ -499,99 +492,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     }
   };
 
-  if (verificationStatus !== "Approved") {
-    return (
-      <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28">
-        <div className="absolute inset-0 premium-grid-fine opacity-[0.04] pointer-events-none" />
-        <Navbar />
 
-        <div className="max-w-[600px] mx-auto px-6 relative z-10 pt-8 text-center space-y-6">
-          <div className="relative flex justify-center">
-            {verificationStatus === "Rejected" ? (
-              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 text-red-600 flex items-center justify-center shadow-lg animate-float-slow">
-                <AlertTriangle className="w-7 h-7" />
-              </div>
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shadow-lg animate-float-slow">
-                <Loader2 className="w-7 h-7 animate-spin" />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <span className={`text-[10px] font-mono tracking-widest font-extrabold uppercase px-3.5 py-1 rounded-full border ${
-              verificationStatus === "Rejected"
-                ? "bg-red-50 text-red-600 border-red-200"
-                : "bg-amber-50 text-amber-600 border-amber-200"
-            }`}>
-              Verification: {verificationStatus}
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-950">
-              {verificationStatus === "Rejected" ? "Verification Rejected" : "Compliance Verification Pending"}
-            </h1>
-            <p className="text-xs text-zinc-500 font-semibold leading-relaxed max-w-sm mx-auto">
-              {verificationStatus === "Rejected"
-                ? "Your document review has been declined. Please check the reason below and re-submit your onboarding data."
-                : "Your professional driver credentials and vehicle files are currently under compliance review. You cannot go online until approved."}
-            </p>
-          </div>
-
-          {verificationStatus === "Rejected" && rejectionReason && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-left max-w-md mx-auto space-y-1">
-              <span className="text-[10px] font-mono font-bold text-red-500 uppercase tracking-wide">Declined Reason</span>
-              <p className="text-xs font-bold text-red-800 leading-normal">{rejectionReason}</p>
-            </div>
-          )}
-
-          <div className="bg-white border border-zinc-200 rounded-3xl p-6 text-left max-w-md mx-auto space-y-3 font-mono text-[11px] text-zinc-650 shadow-sm">
-            <div className="flex justify-between pb-2 border-b border-zinc-150 font-bold text-zinc-900 uppercase">
-              <span>CHECKLIST</span>
-              <span>STATUS</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Aadhaar & PAN Match</span>
-              <span className="text-emerald-600 font-bold uppercase text-[9.5px]">✓ Submitted</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Driving License</span>
-              <span className="text-emerald-600 font-bold uppercase text-[9.5px]">✓ Submitted</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>RC & Insurance</span>
-              <span className="text-emerald-600 font-bold uppercase text-[9.5px]">✓ Submitted</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Compliance Review</span>
-              {verificationStatus === "Rejected" ? (
-                <span className="text-red-600 font-bold uppercase text-[9.5px]">✕ Rejected</span>
-              ) : (
-                <span className="text-amber-600 font-bold uppercase text-[9.5px] animate-pulse">● In Review</span>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-6 space-y-4">
-            {verificationStatus === "Rejected" && (
-              <button
-                onClick={() => router.push("/onboarding")}
-                className="w-full max-w-[200px] mx-auto py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all shadow-sm"
-              >
-                Re-submit Documents
-              </button>
-            )}
-
-            <div className="text-[11.5px] text-zinc-400 font-semibold">
-              Testing RYDR?{" "}
-              <Link href="/admin" className="text-zinc-900 font-extrabold hover:underline inline-flex items-center space-x-0.5">
-                <span>Open Admin Dashboard to Approve</span>
-                <ArrowRight className="w-3.5 h-3.5 text-zinc-800" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28">
@@ -702,31 +603,6 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                 </div>
               </section>
 
-              {/* Expanded, Telemetry-styled Debug Block (Premium design) */}
-              <div className="bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-3xl p-5 shadow-inner">
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-3.5">
-                  <span className="text-[10px] font-mono font-bold tracking-[0.2em] text-zinc-450 uppercase">REAL-TIME GPS TELEMETRY</span>
-                  <span className="text-[10.5px] font-mono text-zinc-550">{debugLastUpdated ?? "Standby"}</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-[11.5px] text-zinc-300">
-                  <div>
-                    <p className="text-zinc-550 text-[9.5px] uppercase">Latitude</p>
-                    <p className="font-bold text-white mt-0.5">{debugLat ? debugLat.toFixed(5) : "Searching GPS..."}</p>
-                  </div>
-                  <div>
-                    <p className="text-zinc-550 text-[9.5px] uppercase">Longitude</p>
-                    <p className="font-bold text-white mt-0.5">{debugLng ? debugLng.toFixed(5) : "Searching GPS..."}</p>
-                  </div>
-                  <div>
-                    <p className="text-zinc-550 text-[9.5px] uppercase">Telemetry</p>
-                    <p className="font-bold text-emerald-500 mt-0.5">Active</p>
-                  </div>
-                  <div>
-                    <p className="text-zinc-550 text-[9.5px] uppercase">Console link</p>
-                    <p className="font-bold text-white mt-0.5">{availability}</p>
-                  </div>
-                </div>
-              </div>
 
             </div>
 
@@ -758,7 +634,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
 
                 <div className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500 pt-1 border-t border-zinc-100">
                   <ShieldCheck className="h-4 w-4 text-zinc-800" />
-                  <span>Aadhaar Verified Operator</span>
+                  <span>Verified Driver</span>
                 </div>
               </div>
 
@@ -953,15 +829,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
 
       </div>
 
-      {/* Sync/loading overlay */}
-      {loading && (
-        <div className="fixed inset-0 bg-white/60 backdrop-blur-3xs z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center space-y-3.5 p-7 bg-white/95 border border-zinc-200/60 shadow-2xl rounded-3xl animate-fade-in">
-            <Loader2 className="w-8 h-8 text-zinc-950 animate-spin" />
-            <span className="text-[10px] font-mono font-black text-zinc-500 uppercase tracking-widest">Syncing Operator Console...</span>
-          </div>
-        </div>
-      )}
+
     </main>
   );
 }

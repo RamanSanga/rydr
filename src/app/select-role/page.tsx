@@ -22,7 +22,7 @@ export default function RoleSelectionPage() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<RydrRole | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
+
 
   const roleOptions: RoleOption[] = [
     {
@@ -45,41 +45,15 @@ export default function RoleSelectionPage() {
     },
   ];
 
-  const stepsText = [
-    "Authenticating with Clerk secure vaults...",
-    "Provisioning your Rydr publicMetadata claim...",
-    "Setting up your custom cloud workspace...",
-    "Preparing your brand new dashboard...",
-  ];
-
   const handleSelectRole = async (role: RydrRole) => {
     setSelectedRole(role);
     setIsSubmitting(true);
-    setLoadingStep(0);
-
-    // Simulate onboarding preparation step animations
-    const interval = setInterval(() => {
-      setLoadingStep((prev) => {
-        if (prev >= stepsText.length - 1) {
-          clearInterval(interval);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 700);
-
     try {
-      // Trigger Clerk metadata write action
       await selectUserRole(role);
-      
-      // Perform redirect
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 2900);
+      router.push("/dashboard");
     } catch (e) {
-      clearInterval(interval);
       setIsSubmitting(false);
-      alert("Something went wrong saving your role. Please try again.");
+      alert("Something went wrong. Please try again.");
     }
   };
 
