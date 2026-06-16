@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, type ComponentType } from "react";
-import { CarFront, Circle, CircleDot, Coins, ShieldCheck, TrendingUp, UserCircle2, Loader2, Navigation, MapPin, AlertTriangle, ArrowRight } from "lucide-react";
-import Navbar from "@/components/Navbar";
+import { CarFront, Circle, CircleDot, Coins, ShieldCheck, TrendingUp, UserCircle2, Loader2, Navigation, MapPin } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const MapboxMap = dynamic(() => import("@/components/MapboxMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-zinc-100 animate-pulse" />,
+});
 import { getOnboardingState } from "@/actions/onboarding";
 import {
   acceptedRides,
@@ -297,8 +302,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
   const router = useRouter();
   const pathname = usePathname();
   const [availability, setAvailability] = useState<DriverAvailability>("Offline"); // Default to Offline when checking status
-  const [verificationStatus, setVerificationStatus] = useState<string>("Pending");
-  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  const [driverCoords, setDriverCoords] = useState<[number, number] | null>([77.0266, 28.4595]);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState(driverGreetings[0]);
 
@@ -330,8 +334,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         return;
       }
 
-      setVerificationStatus(state.driverProfile?.verificationStatus || "Pending");
-      setRejectionReason(state.driverProfile?.rejectionReason || null);
+
 
       const [dbRequests, dbActive, dbCompleted, dbStats] = await Promise.all([
         fetchAvailableRideRequests(),
@@ -414,10 +417,12 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
+            const { latitude, longitude } = position.coords;
+            setDriverCoords([longitude, latitude]);
             try {
               await updateDriverLocation(
-                position.coords.latitude,
-                position.coords.longitude,
+                latitude,
+                longitude,
                 availability === "Online"
               );
             } catch (err) {
@@ -492,227 +497,81 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     }
   };
 
-
-
   return (
-    <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28">
-      {/* Global backdrop visual grid */}
-      <div className="absolute inset-0 premium-grid-fine opacity-[0.04] pointer-events-none" />
-      <Navbar />
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-zinc-955 text-zinc-900 antialiased">
+      {/* Dynamic Background Map */}
+      <div className="absolute inset-0 z-0 w-full h-full">
+        <MapboxMap
+          pickupCoords={driverCoords}
+          destinationCoords={null}
+          pickupName="My Location"
+          destinationName=""
+          routeGeometry={null}
+          distanceMiles={null}
+          durationMins={null}
+          isLoadingRoute={false}
+          nearbyDrivers={[]}
+        />
+      </div>
 
-      <div className="max-w-[1200px] mx-auto px-6 sm:px-8 relative z-10 space-y-8">
+      {/* Floating HUD Container */}
+      <div className="relative z-10 flex flex-col h-full w-full justify-between pointer-events-none p-4 md:p-6 pb-8">
         
-        {/* Core Controls Header (Spacious and Premium) */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 pb-6 border-b border-zinc-200/60">
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-mono font-bold tracking-[0.25em] text-zinc-400 uppercase leading-none">
-              Driver portal
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-950 leading-tight">
-              {greeting}
-            </h1>
+        {/* TOP: Floating Header & Tab Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-md border border-zinc-200/50 pointer-events-auto max-w-5xl mx-auto">
+          <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-1.5 group pr-3 border-r border-zinc-200">
+              <span className="text-xl font-black tracking-tighter text-zinc-900">
+                RYDR
+              </span>
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-900" />
+            </Link>
+            <div className="space-y-0.5">
+              <h2 className="text-xs font-black text-zinc-950 leading-none">Console HUD</h2>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{driverProfile.city} Fleet</p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
             <SubNavigation activeView={view} />
-            <PremiumAvailabilityToggle availability={availability} setAvailability={setAvailability} />
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-bold shadow-sm transition-all duration-300 ${
+                availability === "Online"
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 font-black"
+                  : "border-zinc-200 bg-zinc-100 text-zinc-500"
+              }`}
+            >
+              {availability === "Online" ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Online</span>
+                </>
+              ) : (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-zinc-400" />
+                  <span>Offline</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* ── View: Overview (Console) ── */}
-        {view === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Main Stream: Shift Earnings & Live Queue */}
-            <div className="lg:col-span-8 space-y-8">
+        {/* MIDDLE: Content Area */}
+        <div className="flex-grow flex items-start justify-start w-full max-w-5xl mx-auto my-4 overflow-hidden relative">
+          
+          {/* Rides panel */}
+          {view === "rides" && (
+            <div className="w-full md:w-[450px] max-h-full overflow-y-auto bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl p-5 shadow-xl pointer-events-auto space-y-5 flex flex-col">
+              <div className="pb-3 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                <h3 className="text-xs font-black text-zinc-950 uppercase tracking-widest font-mono">Dispatches</h3>
+                <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded-full font-bold text-zinc-600">
+                  {accepted.length + requests.length} total
+                </span>
+              </div>
               
-              {/* Premium Shift Earnings Banner (No bulky boxes) */}
-              <div className="bg-zinc-950 text-white rounded-3xl p-6.5 relative overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
-                {/* background lights */}
-                <div className="absolute right-0 bottom-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Shift Earnings</span>
-                    <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-white mt-1.5">{stats.todayEarnings}</h2>
-                    <p className="text-[12px] text-zinc-400 font-semibold mt-1">Base fares + tips accumulated today</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-6 text-right sm:border-l sm:border-zinc-800 sm:pl-8">
-                    <div>
-                      <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Runs</span>
-                      <p className="text-2xl font-black text-white mt-1">{stats.completedRidesCount}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">Rating</span>
-                      <p className="text-2xl font-black text-white mt-1">{stats.driverRating}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Ride Requests Queue */}
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-black tracking-tight text-zinc-900">Live Requests Feed</h3>
-                  {availability === "Online" && (
-                    <span className="text-[10.5px] text-emerald-600 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full animate-pulse">
-                      Live dispatching...
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {availability === "Offline" ? (
-                    <div className="col-span-full py-16 text-center border border-dashed border-zinc-200/80 bg-white rounded-3xl flex flex-col items-center justify-center space-y-4 shadow-sm">
-                      <div className="p-4 bg-zinc-50 rounded-2xl text-zinc-400 border border-zinc-100">
-                        <CarFront className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <h4 className="text-[14px] font-bold text-zinc-950">You are currently offline</h4>
-                        <p className="text-xs text-zinc-450 font-semibold max-w-[280px] mx-auto mt-1 leading-normal">
-                          Go online using the controller toggle to start receiving live incoming client bookings in Delhi NCR.
-                        </p>
-                      </div>
-                    </div>
-                  ) : requests.length > 0 ? (
-                    requests.map((request) => (
-                      <RideTile
-                        key={request.id}
-                        rider={request.rider}
-                        route={request.pickup}
-                        meta={`${request.destination} · ${request.distance}`}
-                        amount={request.fare}
-                        tier={request.tier}
-                        status={request.status}
-                        onAccept={() => handleAcceptRequest(request.id)}
-                        onDecline={() => handleDeclineRequest(request.id)}
-                      />
-                    ))
-                  ) : (
-                    <div className="col-span-full py-16 text-center border border-dashed border-zinc-200/80 bg-white rounded-3xl flex flex-col items-center justify-center space-y-4 shadow-sm">
-                      <div className="h-8 w-8 rounded-full border-2 border-zinc-450 border-t-transparent animate-spin" />
-                      <div>
-                        <h4 className="text-[14px] font-bold text-zinc-950">Waiting for requests...</h4>
-                        <p className="text-xs text-zinc-450 font-semibold mt-1">
-                          The dispatch board is currently clear. Stand by at local hot spots for premium rides.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-
-            </div>
-
-            {/* Right Sidebar: Quick Profile & Timeline History */}
-            <div className="lg:col-span-4 space-y-6">
-              
-              {/* Minimalist Profile Details Card */}
-              <div className="rounded-3xl border border-zinc-200/80 bg-white p-5.5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] space-y-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 bg-zinc-950 text-white rounded-full flex items-center justify-center font-black text-sm shadow-md">
-                    {driverProfile.initials}
-                  </div>
-                  <div>
-                    <h4 className="text-[14.5px] font-bold text-zinc-950 leading-none">{driverProfile.name}</h4>
-                    <p className="text-[10.5px] text-zinc-400 font-bold uppercase mt-1 tracking-wider">{driverProfile.city} Fleet</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-3 shadow-3xs">
-                    <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide">Vehicle</span>
-                    <p className="text-[12px] font-bold text-zinc-800 mt-0.5 leading-tight">{driverProfile.vehicle}</p>
-                  </div>
-                  <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-3 shadow-3xs">
-                    <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide">Plate No</span>
-                    <p className="text-[12px] font-bold text-zinc-800 mt-0.5 leading-tight font-mono">{driverProfile.plate}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500 pt-1 border-t border-zinc-100">
-                  <ShieldCheck className="h-4 w-4 text-zinc-800" />
-                  <span>Verified Driver</span>
-                </div>
-              </div>
-
-              {/* Latest Runs Timeline */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">Shift Timeline</h4>
-                
-                <div className="space-y-3.5">
-                  {completed.slice(0, 2).map((ride) => (
-                    <div key={ride.id} className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:border-zinc-350 transition-all flex flex-col space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${tierStyles[ride.tier]}`}>
-                          {ride.tier}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-mono font-bold">{ride.time}</span>
-                      </div>
-                      <div className="text-[12.5px] font-semibold text-zinc-800">
-                        <p className="text-zinc-950 truncate">{ride.route}</p>
-                        <p className="text-zinc-400 text-[10.5px] mt-0.5">Passenger: {ride.rider}</p>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 mt-1">
-                        <span>★ 5.0 Rating</span>
-                        <span className="text-zinc-950 font-black">{ride.payout}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {completed.length === 0 && (
-                    <p className="text-xs text-zinc-400 font-semibold text-center py-4 bg-white border border-zinc-200 rounded-2xl">No completed runs recorded.</p>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-        {/* ── View: Rides (Active Dispatches list) ── */}
-        {view === "rides" && (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              {/* Requests column */}
-              <div className="space-y-4.5">
-                <div className="pb-3 border-b border-zinc-200 flex items-center justify-between">
-                  <h3 className="text-sm font-black tracking-tight text-zinc-950 uppercase font-mono">1. Incoming Requests</h3>
-                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                </div>
-                <div className="space-y-4">
-                  {availability === "Offline" ? (
-                    <p className="text-xs text-zinc-400 font-semibold text-center py-8 bg-white border border-zinc-200 rounded-2xl">Offline.</p>
-                  ) : requests.length > 0 ? (
-                    requests.map((request) => (
-                      <RideTile
-                        key={request.id}
-                        rider={request.rider}
-                        route={request.pickup}
-                        meta={`${request.destination} · ${request.distance}`}
-                        amount={request.fare}
-                        tier={request.tier}
-                        status={request.status}
-                        onAccept={() => handleAcceptRequest(request.id)}
-                        onDecline={() => handleDeclineRequest(request.id)}
-                      />
-                    ))
-                  ) : (
-                    <p className="text-xs text-zinc-400 font-semibold text-center py-8 bg-white border border-zinc-200 rounded-2xl">No incoming requests.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Accepted column */}
-              <div className="space-y-4.5">
-                <div className="pb-3 border-b border-zinc-200 flex items-center justify-between">
-                  <h3 className="text-sm font-black tracking-tight text-zinc-950 uppercase font-mono">2. Active Dispatches</h3>
-                  <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                </div>
-                <div className="space-y-4">
+              <div className="space-y-6 overflow-y-auto pr-1 flex-grow">
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Active Trip</h4>
                   {accepted.length > 0 ? (
                     accepted.map((ride) => (
                       <RideTile
@@ -728,108 +587,243 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       />
                     ))
                   ) : (
-                    <div className="py-12 text-center border border-dashed border-zinc-200 bg-white rounded-2xl p-6">
-                      <CarFront className="w-5 h-5 text-zinc-350 mx-auto" />
-                      <p className="text-xs text-zinc-500 font-semibold mt-2 leading-relaxed">
-                        No assigned rides. Accept requests from the queue.
-                      </p>
-                    </div>
+                    <p className="text-xs text-zinc-400 italic py-2">No active rides.</p>
                   )}
                 </div>
-              </div>
 
-              {/* Completed column */}
-              <div className="space-y-4.5">
-                <div className="pb-3 border-b border-zinc-200 flex items-center justify-between">
-                  <h3 className="text-sm font-black tracking-tight text-zinc-950 uppercase font-mono">3. Completed Runs</h3>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <div className="space-y-3 border-t border-zinc-100 pt-4">
+                  <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Nearby Requests</h4>
+                  {availability === "Offline" ? (
+                    <p className="text-xs text-zinc-400 italic py-2">Go online to receive nearby requests.</p>
+                  ) : requests.length > 0 ? (
+                    requests.map((request) => (
+                      <RideTile
+                        key={request.id}
+                        rider={request.rider}
+                        route={request.pickup}
+                        meta={`${request.destination} · ${request.distance}`}
+                        amount={request.fare}
+                        tier={request.tier}
+                        status={request.status}
+                        onAccept={() => handleAcceptRequest(request.id)}
+                        onDecline={() => handleDeclineRequest(request.id)}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic py-2">No requests right now.</p>
+                  )}
                 </div>
-                <div className="space-y-4">
+
+                <div className="space-y-3 border-t border-zinc-100 pt-4">
+                  <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Completed Runs</h4>
                   {completed.length > 0 ? (
                     completed.map((ride) => (
                       <RideTile
                         key={ride.id}
                         rider={ride.rider}
                         route={ride.route}
-                        meta={`${ride.time} · ${ride.rating} rating`}
+                        meta={`${ride.time} · ★ 5.0`}
                         amount={ride.payout}
                         tier={ride.tier}
                       />
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-400 font-semibold text-center py-8 bg-white border border-zinc-200 rounded-2xl">No rides completed yet.</p>
+                    <p className="text-xs text-zinc-400 italic py-2">No completed runs recorded today.</p>
                   )}
                 </div>
               </div>
-
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── View: Earnings (Shift Financials Ledger) ── */}
-        {view === "earnings" && (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
-              {/* Left Column: Weekly payout journal */}
-              <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white border border-zinc-200 rounded-3xl p-6.5 shadow-sm space-y-5">
-                  <h3 className="text-base font-black text-zinc-950 tracking-tight">Shift pay structures</h3>
-                  
-                  <div className="space-y-3">
-                    {weeklyPayouts.map((item) => (
-                      <div key={item.label} className="bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-100 rounded-2xl p-4.5 shadow-3xs flex items-center justify-between transition-colors">
-                        <div>
-                          <p className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wide">{item.label}</p>
-                          <p className="text-xs font-semibold text-zinc-500 mt-1">{item.note}</p>
-                        </div>
-                        <p className="text-lg font-black text-zinc-950 font-sans">{item.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {/* Earnings panel */}
+          {view === "earnings" && (
+            <div className="w-full md:w-[450px] max-h-full overflow-y-auto bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl p-5 shadow-xl pointer-events-auto space-y-5">
+              <div className="pb-3 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                <h3 className="text-xs font-black text-zinc-950 uppercase tracking-widest font-mono">Earnings</h3>
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full font-bold">
+                  Today
+                </span>
               </div>
 
-              {/* Right Column: Mini aggregates & highlights */}
-              <div className="lg:col-span-4 space-y-6">
-                
-                {/* Aggregate details block */}
-                <div className="bg-white border border-zinc-200 rounded-3xl p-5.5 shadow-sm space-y-4">
-                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-450">Financial indicators</h4>
-                  <div className="space-y-3.5">
-                    {earningsSummaryCards.map((item) => (
-                      <div key={item.label} className="border-b border-zinc-100 pb-3 last:border-b-0 last:pb-0">
-                        <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide">{item.label}</span>
-                        <p className="text-xl font-black text-zinc-950 mt-0.5">{item.value}</p>
-                        <p className="text-[10.5px] text-zinc-550 font-semibold leading-none mt-1">{item.note}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Instant payout action banner */}
-                <div className="bg-zinc-950 text-white rounded-3xl p-5 shadow-md flex flex-col space-y-3">
-                  <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-450 uppercase">DAILY ACCRUED PAYOUT</span>
+              <div className="space-y-4">
+                <div className="bg-zinc-950 text-white rounded-2xl p-4 shadow-md flex flex-col space-y-3">
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">TODAY&apos;S EARNINGS</span>
                   <div className="flex items-end justify-between">
                     <span className="text-2xl font-black tracking-tight text-white">{stats.todayEarnings}</span>
                     <button className="px-3.5 py-1.5 bg-white text-black hover:bg-zinc-100 rounded-full font-bold text-[10.5px] active:scale-97 transition-all shadow-xs shrink-0 cursor-pointer">
-                      Instant Cashout
+                      Cashout
                     </button>
                   </div>
                   <p className="text-[10px] text-zinc-500 font-semibold leading-normal pt-1.5 border-t border-zinc-800">
-                    Shift payouts are settled into your bank account daily at midnight.
+                    Payouts settled daily at midnight.
                   </p>
                 </div>
 
+                <div className="space-y-2.5">
+                  <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">Pay Breakdown</h4>
+                  {weeklyPayouts.map((item) => (
+                    <div key={item.label} className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wide">{item.label}</p>
+                        <p className="text-[10px] font-semibold text-zinc-500 mt-0.5">{item.note}</p>
+                      </div>
+                      <p className="text-sm font-black text-zinc-950">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-2.5 border-t border-zinc-100 pt-4">
+                  <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">Summary</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {earningsSummaryCards.map((item) => (
+                      <div key={item.label} className="bg-zinc-50 border border-zinc-100 rounded-xl p-3">
+                        <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wide block">{item.label}</span>
+                        <p className="text-base font-black text-zinc-950 mt-0.5">{item.value}</p>
+                        <p className="text-[9.5px] text-zinc-500 font-semibold leading-none mt-1">{item.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
+            </div>
+          )}
+
+          {/* Overview floating cards — pinned to bottom-left */}
+          {view === "overview" && (
+            <div className="absolute bottom-0 left-0 max-w-sm w-full space-y-3 pointer-events-none">
+              
+              {requests.length > 0 && availability === "Online" && (
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border-2 border-emerald-500 shadow-2xl pointer-events-auto space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
+                      NEW REQUEST NEARBY
+                    </span>
+                    <span className="text-xs font-black text-zinc-950">{requests[0].distance}</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest">Trip Route</p>
+                    <p className="text-sm font-extrabold text-zinc-950 mt-1">{requests[0].pickup} ➔ {requests[0].destination}</p>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-zinc-100 pt-3">
+                    <span className="text-[11px] font-bold text-zinc-500">Estimated Payout</span>
+                    <span className="text-lg font-black text-zinc-950">{requests[0].fare}</span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => handleDeclineRequest(requests[0].id)}
+                      className="flex-1 py-3 min-h-[44px] bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      onClick={() => handleAcceptRequest(requests[0].id)}
+                      className="flex-1 py-3 min-h-[44px] bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                    >
+                      Accept Trip
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {accepted.length > 0 && (
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border border-zinc-200 shadow-2xl pointer-events-auto space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded uppercase">
+                      Active Dispatch
+                    </span>
+                    <span className="text-xs font-black text-zinc-950">{accepted[0].eta}</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest">Trip Route</p>
+                    <p className="text-sm font-extrabold text-zinc-950 mt-1 truncate">{accepted[0].route}</p>
+                    <p className="text-[10px] text-zinc-400 mt-1">Passenger: {accepted[0].rider}</p>
+                  </div>
+                  
+                  <div className="border-t border-zinc-100 pt-3 space-y-2">
+                    {accepted[0].status === "Accepted" && (
+                      <button
+                        onClick={() => handleUpdateRideStatus(accepted[0].id, "Driver Arriving")}
+                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        I&apos;ve Arrived
+                      </button>
+                    )}
+                    {accepted[0].status === "Driver Arriving" && (
+                      <button
+                        onClick={() => handleUpdateRideStatus(accepted[0].id, "On Trip")}
+                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        Start Trip
+                      </button>
+                    )}
+                    {accepted[0].status === "On Trip" && (
+                      <button
+                        onClick={() => handleCompleteRide(accepted[0].id)}
+                        className="w-full py-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Complete Trip</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {requests.length === 0 && accepted.length === 0 && (
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 border border-zinc-200/60 shadow-lg pointer-events-auto flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Shift Stats</span>
+                    <div className="flex items-center space-x-3 mt-0.5 text-xs text-zinc-600 font-bold">
+                      <span>Today: <strong className="text-zinc-950 font-black">{stats.todayEarnings}</strong></span>
+                      <span>•</span>
+                      <span>Runs: <strong className="text-zinc-950 font-black">{stats.completedRidesCount}</strong></span>
+                      <span>•</span>
+                      <span>Rating: <strong className="text-zinc-950 font-black">{stats.driverRating}</strong></span>
+                    </div>
+                  </div>
+                  <div className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center text-zinc-800">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                </div>
+              )}
 
             </div>
-          </div>
-        )}
+          )}
+
+        </div>
+
+        {/* BOTTOM: GO ONLINE / GO OFFLINE Toggle */}
+        <div className="w-full max-w-sm mx-auto pointer-events-auto pt-2 shrink-0">
+          {availability === "Offline" ? (
+            <button
+              onClick={() => setAvailability("Online")}
+              className="h-14 w-full bg-emerald-500 hover:bg-emerald-600 active:scale-97 text-white font-black text-base tracking-wider rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2.5 cursor-pointer"
+            >
+              <Circle className="w-4 h-4 fill-white stroke-[2.5px]" />
+              <span>GO ONLINE</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setAvailability("Offline")}
+              className="h-14 w-full bg-zinc-950 hover:bg-zinc-800 active:scale-97 text-white font-black text-sm tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center space-x-2.5 cursor-pointer"
+            >
+              <CircleDot className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+              <span>GO OFFLINE</span>
+            </button>
+          )}
+        </div>
 
       </div>
 
-
+      {/* Loading spinner */}
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+          <div className="bg-white px-5 py-4 rounded-2xl shadow-xl flex items-center space-x-3 border border-zinc-200/80">
+            <Loader2 className="w-5 h-5 text-zinc-950 animate-spin" />
+            <span className="text-xs font-bold text-zinc-700">Updating...</span>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -227,6 +227,14 @@ export default function RideBookingCard({
     }
   }, [selectedRide]);
 
+  // Auto-trigger instant search once both coordinates are resolved
+  useEffect(() => {
+    if (pCoords && dCoords && bookingState === "idle") {
+      triggerSearch();
+    }
+  }, [pCoords, dCoords, bookingState]);
+
+
   const rideTypes = [
     {
       id: "economy",
@@ -308,32 +316,7 @@ export default function RideBookingCard({
     return tier === "xl";
   };
 
-  // Feature 5: AI Fare Prediction & Indian Rupees (₹) pricing range
-  const getAIFareRange = (tier: string) => {
-    const dist = distMiles || 5.0;
-    const surge = getSurgeInfo();
-    const traffic = getTrafficLevel();
-
-    let baseRate = 40;
-    let perKmRate = 12;
-
-    if (tier === "economy") {
-      baseRate = 40;
-      perKmRate = 12;
-    } else if (tier === "premium") {
-      baseRate = 75;
-      perKmRate = 18;
-    } else { // xl
-      baseRate = 110;
-      perKmRate = 25;
-    }
-
-    const price = (baseRate + dist * perKmRate) * surge.multiplier * traffic.multiplier;
-    const minPrice = Math.max(50, Math.floor(price * 0.9));
-    const maxPrice = Math.floor(price * 1.1);
-
-    return `₹${minPrice} - ₹${maxPrice}`;
-  };
+  // Single upfront fare prediction (without AI branding)
 
   // Dynamic Distance-based single fare for database saving
   const getFare = (tier: string) => {
@@ -501,23 +484,17 @@ export default function RideBookingCard({
     }
   };
 
-  const triggerSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function triggerSearch(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!pValue || !dValue) return;
 
     if (!pCoords || !dCoords) {
-      console.warn("Real GPS coordinates are required for both pickup and destination. Please select a valid location from the dropdown or allow location access.");
       setSuggestionsError("Please select a valid location from the suggestions.");
       return;
     }
 
     const start = pCoords;
     const end = dCoords;
-
-    // Compute route if not already done (e.g., typing-only flow)
-    if (!distMiles) {
-      calculateRoute(start, end);
-    }
 
     if (isScheduling) {
       setBookingState("driverFound");
@@ -528,44 +505,29 @@ export default function RideBookingCard({
     setBookingState("searching");
     setLoadingStep(0);
 
-    let currentStep = 0;
-    const stepInterval = setInterval(() => {
-      if (currentStep < 3) {
-        currentStep++;
-        setLoadingStep(currentStep);
-      }
-    }, 1500);
-
-    let nearbyDrivers: any[] = [];
-    let meta: any = null;
     try {
-      const response = await getNearbyDrivers(start[1], start[0]);
-      nearbyDrivers = response.drivers || [];
-      meta = response;
-      setDebugSearchMeta(response);
-    } catch (err) {
-      console.error(err);
-      setDebugNoDriverReason(`CLIENT CATCH BLOCK ERROR: ${(err as any).message || "Unknown error"}`);
-    }
+      // Ensure route is calculated
+      if (!distMiles) {
+        await calculateRoute(start, end);
+      }
 
-    const waitTime = nearbyDrivers.length > 0 ? 4500 : 15000;
-    
-    setTimeout(() => {
-      clearInterval(stepInterval);
+      const response = await getNearbyDrivers(start[1], start[0]);
+      const nearbyDrivers = response.drivers || [];
+      setDebugSearchMeta(response);
+
       if (nearbyDrivers.length > 0) {
         setFoundDriver(nearbyDrivers[0]);
         setBookingState("driverFound");
       } else {
         setBookingState("noDriverFound");
-        if (meta) {
-          if (meta.error) setDebugNoDriverReason(`SERVER EXCEPTION: ${meta.error}`);
-          else if (meta.totalOnline === 0) setDebugNoDriverReason("No online drivers exist in database.");
-          else if (meta.totalOnline > 0 && meta.totalWithinRadius === 0) setDebugNoDriverReason(`Drivers exist (${meta.totalOnline}), but none within ${meta.radius}km radius.`);
-          else setDebugNoDriverReason("Unknown matching issue.");
-        }
+        setDebugNoDriverReason("No drivers available near your location.");
       }
-    }, waitTime);
-  };
+    } catch (err) {
+      console.error("Search failed:", err);
+      setBookingState("noDriverFound");
+      setDebugNoDriverReason(`Search failed: ${(err as any).message || "Unknown error"}`);
+    }
+  }
 
   const confirmRide = async () => {
     if (!pValue || !dValue || !pCoords) return;
@@ -655,15 +617,7 @@ export default function RideBookingCard({
               <h3 className="text-[16px] font-bold text-zinc-900 tracking-tight">Book a Ride</h3>
             </div>
 
-            {/* TEMPORARY RIDER DEBUG UI */}
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm mb-6 text-[10px] text-red-900 font-mono">
-              <h3 className="font-bold mb-2 uppercase text-red-700">Rider Debug Info</h3>
-              <p>Current Latitude: {pCoords ? pCoords[1].toFixed(5) : "Detecting..."}</p>
-              <p>Current Longitude: {pCoords ? pCoords[0].toFixed(5) : "Detecting..."}</p>
-              <p>Total Online Drivers Found: {debugSearchMeta?.totalOnline ?? "Wait for search..."}</p>
-              <p>Drivers Within Radius: {debugSearchMeta?.totalWithinRadius ?? "Wait for search..."}</p>
-              <p>Radius Used: {debugSearchMeta?.radius ? `${debugSearchMeta.radius} km` : "Wait for search..."}</p>
-            </div>
+            {/* Form Container */}
 
             <form onSubmit={triggerSearch} className="space-y-4">
               {/* Ride Mode Toggle */}
@@ -986,7 +940,7 @@ export default function RideBookingCard({
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-zinc-900">{foundDriver.user?.name || "Rohit Kumar"}</h4>
-                    <p className="text-[10px] text-red-600 font-bold mt-0.5 mb-0.5">DEBUG: {foundDriver.distanceKm?.toFixed(2)} km away | Lat {foundDriver.latitude?.toFixed(4)}, Lng {foundDriver.longitude?.toFixed(4)}</p>
+                    {/* Driver details */}
                     <div className="flex items-center space-x-2 mt-0.5">
                       <div className="flex items-center space-x-1 text-amber-500">
                         <Star className="w-3 h-3 fill-current" />
@@ -1064,7 +1018,7 @@ export default function RideBookingCard({
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[14px] font-black text-zinc-900">{getAIFareRange(type.id)}</span>
+                      <span className="text-[14px] font-black text-zinc-900">₹{getFare(type.id)}</span>
                     </div>
                   </div>
                 ))}
@@ -1229,11 +1183,7 @@ export default function RideBookingCard({
               <p className="text-sm text-zinc-500 mt-1">
                 We couldn't find any available drivers near your location.
               </p>
-              {debugNoDriverReason && (
-                <div className="mt-3 text-xs bg-red-100 text-red-800 border border-red-200 p-2 rounded-lg font-mono">
-                  DEBUG REASON:<br/>{debugNoDriverReason}
-                </div>
-              )}
+              {/* No drivers details */}
             </div>
             <button
               onClick={() => setBookingState("idle")}

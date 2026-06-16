@@ -23,7 +23,6 @@ export default function RoleSelectionPage() {
   const [selectedRole, setSelectedRole] = useState<RydrRole | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-
   const roleOptions: RoleOption[] = [
     {
       id: "rider",
@@ -48,12 +47,14 @@ export default function RoleSelectionPage() {
   const handleSelectRole = async (role: RydrRole) => {
     setSelectedRole(role);
     setIsSubmitting(true);
+
     try {
+      // Trigger Clerk metadata write action
       await selectUserRole(role);
       router.push("/dashboard");
     } catch (e) {
       setIsSubmitting(false);
-      alert("Something went wrong. Please try again.");
+      alert("Something went wrong saving your role. Please try again.");
     }
   };
 
@@ -66,18 +67,18 @@ export default function RoleSelectionPage() {
         {/* Typographic Header */}
         <div className="text-center space-y-3.5 max-w-xl mx-auto">
           <span className="text-[10px] font-mono tracking-[0.35em] text-amber-600 font-extrabold uppercase leading-none">
-            WORKSPACE PROVISIONER
+            RYDR PROFILE SELECTION
           </span>
           <h1 className="text-3xl md:text-4.5xl font-black tracking-tighter text-zinc-900 leading-tight">
             Choose your Rydr Profile.
           </h1>
           <p className="text-zinc-500 text-sm font-semibold leading-relaxed">
-            Select your account type to configure your workspace. You can invite team members or book trips instantly upon selection.
+            Select your account type to get started. You can book trips instantly or go online to receive dispatches.
           </p>
         </div>
 
         {/* Option cards grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch max-w-3xl mx-auto">
           {roleOptions.map((option) => {
             const Icon = option.icon;
             return (
@@ -117,7 +118,7 @@ export default function RoleSelectionPage() {
 
                 {/* Bottom CTA Arrow */}
                 <div className="mt-8 pt-4 border-t border-zinc-100 flex items-center justify-between text-xs font-bold text-zinc-400 group-hover:text-black transition-colors">
-                  <span>Enter Workspace</span>
+                  <span>Enter Profile</span>
                   <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
               </motion.div>
@@ -134,35 +135,12 @@ export default function RoleSelectionPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-6"
+            className="fixed inset-0 z-50 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-4"
           >
-            <div className="relative flex items-center justify-center">
-              <Loader2 className="w-14 h-14 text-zinc-800 animate-spin stroke-[1.5]" />
-              <div className="absolute text-[11px] font-bold text-zinc-600 font-mono">
-                {loadingStep + 1}
-              </div>
-            </div>
-            
-            <div className="space-y-1.5">
-              <span className="text-[8.5px] font-mono tracking-widest text-amber-600 font-extrabold uppercase">
-                PROVISIONING WORKSPACE
-              </span>
-              <h4 className="text-base font-extrabold text-zinc-950">
-                Setting up your {selectedRole === "rider" ? "Rider Profile" : selectedRole === "driver" ? "Driver Portal" : "Enterprise Console"}...
-              </h4>
-              <p className="text-xs text-zinc-500 font-mono h-4">
-                {stepsText[loadingStep]}
-              </p>
-            </div>
-
-            <div className="w-full max-w-[220px] bg-zinc-100 h-[3px] rounded-full overflow-hidden">
-              <motion.div
-                className="bg-black h-full"
-                initial={{ width: "0%" }}
-                animate={{ width: `${(loadingStep + 1) * 25}%` }}
-                transition={{ duration: 0.7, ease: "easeInOut" }}
-              />
-            </div>
+            <Loader2 className="w-10 h-10 text-zinc-900 animate-spin stroke-[1.5]" />
+            <p className="text-xs font-bold text-zinc-950 uppercase tracking-wider font-mono">
+              Redirecting...
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
