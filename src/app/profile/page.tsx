@@ -13,6 +13,43 @@ import { User, Phone, Mail, ShieldCheck, Sparkles, Thermometer, VolumeX, CreditC
 
 type ProfileTab = "details" | "documents" | "wallet" | "referrals" | "emergency" | "preferences";
 
+function ProfileSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full animate-pulse">
+      {/* Left Column Skeleton */}
+      <div className="lg:col-span-4 space-y-6">
+        <div className="bg-white border border-zinc-200/60 rounded-3xl p-6 text-center flex flex-col items-center space-y-5">
+          <div className="w-18 h-18 rounded-full bg-zinc-200" />
+          <div className="space-y-2 w-full flex flex-col items-center">
+            <div className="h-4 bg-zinc-200 rounded w-1/2" />
+            <div className="h-3 bg-zinc-200 rounded w-1/3" />
+          </div>
+          <div className="h-8 bg-zinc-200 rounded-full w-full" />
+        </div>
+        <div className="bg-white border border-zinc-200/60 rounded-3xl p-6 space-y-4">
+          <div className="h-4 bg-zinc-200 rounded w-1/3" />
+          <div className="space-y-3">
+            <div className="h-3 bg-zinc-200 rounded w-full" />
+            <div className="h-3 bg-zinc-200 rounded w-5/6" />
+          </div>
+        </div>
+      </div>
+      {/* Right Column Skeleton */}
+      <div className="lg:col-span-8 bg-white border border-zinc-200/60 rounded-3xl p-6 sm:p-8 space-y-6">
+        <div className="h-6 bg-zinc-200 rounded w-1/4" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-3 bg-zinc-200 rounded w-1/6" />
+              <div className="h-10 bg-zinc-200 rounded-2xl w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -41,6 +78,8 @@ export default function ProfilePage() {
   const [licenseNumber, setLicenseNumber] = useState("");
 
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // ── Extended Feature States (Phases 1, 7, 9) ──
   const [ratingStats, setRatingStats] = useState<{ averageRating: number; totalRatings: number; recentReviews: any[] }>({
@@ -80,9 +119,9 @@ export default function ProfilePage() {
         
         if (state.role === "rider" && state.riderProfile) {
           const profile = state.riderProfile;
-          setFullName("Aanya Sharma"); // Prefilled mock matching Clerk
+          setFullName(state.userName || "Passenger");
           setPhone(profile.phone || "");
-          setEmail("aanya.sharma@gmail.com");
+          setEmail(state.userEmail || "rider@rydr.in");
           setDob(profile.dob || "");
           setEmergencyName(profile.emergencyName || "");
           setEmergencyRelation(profile.emergencyRelation || "");
@@ -92,40 +131,41 @@ export default function ProfilePage() {
           setLanguage(profile.language || "English");
         } else if (state.role === "driver" && state.driverProfile) {
           const profile = state.driverProfile;
-          setFullName("Rajesh Kumar");
+          setFullName(state.userName || "Driver Partner");
           setPhone(profile.phone || "");
-          setEmail("rajesh.kumar@rydr.in");
+          setEmail(state.userEmail || "driver@rydr.in");
           setAddress(profile.address || "");
           setVehicleModel(profile.vehicleModel || "");
           setVehicleNumber(profile.vehicleNumber || "");
           setLicenseNumber(profile.licenseNumber || "");
-          setVerificationStatus(profile.verificationStatus || "Pending");
         }
 
-        // Fetch dynamic reviews and rating aggregation (Phase 1)
-        const ratings = await fetchUserRatingStats(state.role as "rider" | "driver");
+        setVerificationStatus(state.driverProfile?.verificationStatus || "Pending");
+        
+        // Parallel data fetch for rating and wallet details
+        const [ratings, walletData, refStats] = await Promise.all([
+          fetchUserRatingStats(state.role as "rider" | "driver"),
+          getOrCreateWalletAction(),
+          fetchUserReferralStatsAction(),
+        ]);
+
         setRatingStats(ratings);
-
-        // Fetch wallet status (Phase 7)
-        const userWallet = await getOrCreateWalletAction();
-        setWallet(userWallet);
-
-        // Fetch referral codes and invite stats (Phase 9)
-        const refs = await fetchUserReferralStatsAction();
-        setReferralStats(refs);
-
+        setWallet(walletData);
+        setReferralStats(refStats);
       } catch (err) {
-        console.error("Failed to load profile details", err);
+        console.error("Failed to load profile details:", err);
       } finally {
         setLoading(false);
       }
     }
+
     loadProfile();
-  }, []);
+  }, [router]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSaving(true);
+    setSaveError(null);
     try {
       if (role === "rider") {
         await updateRiderProfile({
@@ -139,7 +179,7 @@ export default function ProfilePage() {
           acPreference,
           language,
         });
-      } else if (role === "driver") {
+      } else {
         await updateDriverProfile({
           name: fullName,
           phone,
@@ -150,40 +190,34 @@ export default function ProfilePage() {
         });
       }
       setIsSavedAlert(true);
-      setTimeout(() => setIsSavedAlert(false), 2500);
+      setTimeout(() => setIsSavedAlert(false), 3000);
     } catch (err) {
-      alert("Error saving profile details. Please try again.");
+      console.error("Error saving profile details:", err);
+      setSaveError("Failed to save. Please try again.");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
-  // Handle Wallet Top Up (Phase 7)
   const handleTopup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const parsedAmount = parseFloat(topupAmount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert("Please enter a valid amount to load.");
-      return;
-    }
+    const amountVal = parseFloat(topupAmount);
+    if (isNaN(amountVal) || amountVal <= 0) return;
 
     setTopupLoading(true);
     try {
-      const response = await addMoneyAction(parsedAmount);
-      if (response.success) {
-        const userWallet = await getOrCreateWalletAction();
-        setWallet(userWallet);
-        alert(`₹${parsedAmount} successfully added to your wallet!`);
+      const res = await addMoneyAction(amountVal);
+      if (res.success) {
+        setWallet(res.wallet);
+        setTopupAmount("500");
       }
     } catch (err) {
-      console.error(err);
-      alert("Top up failed. Please try again.");
+      console.error("Failed to add money:", err);
     } finally {
       setTopupLoading(false);
     }
   };
 
-  // Handle Claiming Referral Code (Phase 9)
   const handleClaimReferral = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!referralInput.trim()) return;
@@ -191,20 +225,20 @@ export default function ProfilePage() {
     setReferralLoading(true);
     setReferralMessage(null);
     try {
-      const response = await applyReferralCodeAction(referralInput.trim());
-      if (response.success) {
+      const res = await applyReferralCodeAction(referralInput.trim());
+      if (res.success) {
         setReferralMessage({
           type: "success",
-          text: `🎉 Referral code applied! ₹${response.reward} has been credited to your wallet.`,
+          text: `🎉 Referral code applied! ₹${res.reward} has been credited to your wallet.`,
         });
         setReferralInput("");
-        
-        // Refresh wallet and referral metrics
-        const userWallet = await getOrCreateWalletAction();
-        setWallet(userWallet);
-
-        const refs = await fetchUserReferralStatsAction();
-        setReferralStats(refs);
+        // Reload wallet & referral stats
+        const [walletData, refStats] = await Promise.all([
+          getOrCreateWalletAction(),
+          fetchUserReferralStatsAction(),
+        ]);
+        setWallet(walletData);
+        setReferralStats(refStats);
       }
     } catch (err: any) {
       setReferralMessage({
@@ -222,15 +256,6 @@ export default function ProfilePage() {
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="w-10 h-10 text-zinc-950 animate-spin" />
-        <span className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">Syncing profile parameters...</span>
-      </div>
-    );
-  }
 
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: "details", label: "Profile Details" },
@@ -259,24 +284,29 @@ export default function ProfilePage() {
           </h1>
         </div>
 
-        {/* Tab Controls Bar */}
-        <div className="flex flex-wrap gap-1.5 bg-zinc-900/5 p-1 rounded-3xl max-w-max">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 cursor-pointer ${
-                activeTab === tab.id
-                  ? "bg-white text-zinc-950 shadow-xs"
-                  : "text-zinc-550 hover:text-zinc-950"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Tab Controls Bar - horizontally scrollable on mobile */}
+        <div className="overflow-x-auto -mx-2 px-2">
+          <div className="flex items-center gap-1.5 bg-zinc-900/5 p-1 rounded-3xl w-max min-w-full sm:min-w-0">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "bg-white text-zinc-950 shadow-xs"
+                    : "text-zinc-550 hover:text-zinc-950"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {loading ? (
+          <ProfileSkeleton />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left Column: Profile Card Overview */}
           <div className="lg:col-span-4 space-y-6">
@@ -448,19 +478,34 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-zinc-100">
                       <button
                         type="submit"
-                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 text-white font-bold text-xs rounded-full transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                        disabled={isSaving}
+                        className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-850 active:scale-97 disabled:opacity-60 text-white font-bold text-xs rounded-full transition-all flex items-center space-x-1.5 shadow-sm cursor-pointer"
                       >
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Save Profile Details</span>
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="w-4 h-4" />
+                            <span>Save Profile Details</span>
+                          </>
+                        )}
                       </button>
 
                       {isSavedAlert && (
                         <span className="text-[11px] font-mono text-emerald-600 font-bold uppercase flex items-center space-x-1">
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                           <span>Saved successfully</span>
+                        </span>
+                      )}
+                      {saveError && (
+                        <span className="text-[11px] font-mono text-red-600 font-bold flex items-center space-x-1">
+                          <span>{saveError}</span>
                         </span>
                       )}
                     </div>
@@ -1017,7 +1062,7 @@ export default function ProfilePage() {
                         {/* Climate */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">AC Preference</label>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {["AC", "Non-AC", "No Preference"].map((pref) => (
                               <button
                                 type="button"
@@ -1038,7 +1083,7 @@ export default function ProfilePage() {
                         {/* Language */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Language Preference</label>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {["English", "Hindi", "Kannada"].map((lang) => (
                               <button
                                 type="button"
@@ -1103,8 +1148,8 @@ export default function ProfilePage() {
 
             </AnimatePresence>
           </div>
-
         </div>
+      )}
       </div>
     </main>
   );

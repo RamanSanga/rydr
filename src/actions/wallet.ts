@@ -22,24 +22,41 @@ export async function getOrCreateWalletAction() {
 
   if (!wallet) {
     // Initialize wallet with ₹500 welcome credit to enable booking immediately!
-    wallet = await prisma.wallet.create({
-      data: {
-        userId,
-        balance: 500.00,
-        transactions: {
-          create: {
-            amount: 500.00,
-            type: "TOPUP",
-            description: "🎉 Welcome Credit",
+    try {
+      wallet = await prisma.wallet.create({
+        data: {
+          userId,
+          balance: 500.00,
+          transactions: {
+            create: {
+              amount: 500.00,
+              type: "TOPUP",
+              description: "🎉 Welcome Credit",
+            },
           },
         },
-      },
-      include: {
-        transactions: {
-          orderBy: { createdAt: "desc" },
+        include: {
+          transactions: {
+            orderBy: { createdAt: "desc" },
+          },
         },
-      },
-    });
+      });
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        // If unique constraint fails, it means another concurrent request just created the wallet.
+        // Fall back by fetching the newly created wallet.
+        wallet = await prisma.wallet.findUnique({
+          where: { userId },
+          include: {
+            transactions: {
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        });
+      } else {
+        throw err;
+      }
+    }
   }
 
   return wallet;

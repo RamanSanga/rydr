@@ -49,6 +49,56 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
+function TableSkeleton({ cols }: { cols: number }) {
+  return (
+    <>
+      {[1, 2, 3].map((row) => (
+        <tr key={row} className="animate-pulse">
+          {Array.from({ length: cols }).map((_, col) => (
+            <td key={col} className="px-6 py-4.5">
+              <div className="h-4 bg-zinc-205 rounded w-5/6" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function ComplianceSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      {[1, 2].map((i) => (
+        <div key={i} className="bg-white border border-zinc-200/60 rounded-3xl p-5 sm:p-6 space-y-4.5">
+          <div className="flex justify-between items-center">
+            <div className="h-4 bg-zinc-200 rounded w-1/3" />
+            <div className="h-4 bg-zinc-200 rounded w-16" />
+          </div>
+          <div className="h-[1px] bg-zinc-100" />
+          <div className="h-10 bg-zinc-200 rounded-xl w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReviewFeedSkeleton() {
+  return (
+    <div className="divide-y divide-zinc-100 animate-pulse">
+      {[1, 2].map((i) => (
+        <div key={i} className="p-5.5 space-y-3">
+          <div className="flex items-center space-x-2">
+            <div className="h-4 bg-zinc-200/80 rounded w-24" />
+            <div className="h-3 bg-zinc-250 rounded w-16" />
+          </div>
+          <div className="h-5 bg-zinc-200 rounded w-3/4" />
+          <div className="h-3 bg-zinc-250 rounded w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"users" | "drivers" | "rides" | "promos" | "referrals" | "reviews">("users");
@@ -270,7 +320,11 @@ export default function AdminPage() {
           <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.01)] flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-[9.5px] font-mono font-bold text-zinc-400 uppercase tracking-widest block">Total Earnings</span>
-              <p className="text-xl sm:text-2xl font-black text-zinc-950 font-sans">₹{stats.totalRevenue.toLocaleString()}</p>
+              {loading ? (
+                <div className="h-7 w-24 bg-zinc-200 rounded animate-pulse my-1" />
+              ) : (
+                <p className="text-xl sm:text-2xl font-black text-zinc-950 font-sans">₹{stats.totalRevenue.toLocaleString()}</p>
+              )}
               <span className="text-[9.5px] text-emerald-600 font-extrabold flex items-center gap-0.5 mt-0.5">
                 <TrendingUp className="w-2.5 h-2.5" />
                 <span>100% Platform Revenue</span>
@@ -284,7 +338,11 @@ export default function AdminPage() {
           <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.01)] flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-[9.5px] font-mono font-bold text-zinc-400 uppercase tracking-widest block">Active Trips</span>
-              <p className="text-xl sm:text-2xl font-black text-zinc-950 font-mono">{stats.activeRidesCount}</p>
+              {loading ? (
+                <div className="h-7 w-12 bg-zinc-200 rounded animate-pulse my-1" />
+              ) : (
+                <p className="text-xl sm:text-2xl font-black text-zinc-950 font-mono">{stats.activeRidesCount}</p>
+              )}
               <span className="text-[9.5px] text-blue-600 font-extrabold flex items-center gap-1 mt-0.5 animate-pulse">
                 <Activity className="w-2.5 h-2.5" />
                 <span>Live Dispatching</span>
@@ -298,7 +356,11 @@ export default function AdminPage() {
           <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.01)] flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-[9.5px] font-mono font-bold text-zinc-400 uppercase tracking-widest block">Online Drivers</span>
-              <p className="text-xl sm:text-2xl font-black text-zinc-950 font-mono">{stats.activeOnlineDriversCount}</p>
+              {loading ? (
+                <div className="h-7 w-12 bg-zinc-200 rounded animate-pulse my-1" />
+              ) : (
+                <p className="text-xl sm:text-2xl font-black text-zinc-950 font-mono">{stats.activeOnlineDriversCount}</p>
+              )}
               <span className="text-[9.5px] text-emerald-600 font-extrabold flex items-center gap-1 mt-0.5">
                 <CircleDot className="w-2.5 h-2.5 fill-emerald-500 text-emerald-500 animate-ping" />
                 <span>GPS Telemetry Active</span>
@@ -312,7 +374,11 @@ export default function AdminPage() {
           <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.01)] flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-[9.5px] font-mono font-bold text-zinc-400 uppercase tracking-widest block">Promo Redeemed</span>
-              <p className="text-xl sm:text-2xl font-black text-zinc-950 font-mono">{stats.couponUsageCount}</p>
+              {loading ? (
+                <div className="h-7 w-12 bg-zinc-200 rounded animate-pulse my-1" />
+              ) : (
+                <p className="text-xl sm:text-2xl font-black text-zinc-950 font-mono">{stats.couponUsageCount}</p>
+              )}
               <span className="text-[9.5px] text-amber-600 font-extrabold flex items-center gap-0.5 mt-0.5">
                 <Percent className="w-2.5 h-2.5" />
                 <span>Active coupons active</span>
@@ -382,7 +448,9 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
-                    {users.length > 0 ? (
+                    {loading ? (
+                      <TableSkeleton cols={5} />
+                    ) : users.length > 0 ? (
                       users.map((user) => {
                         let onboardingState = "Not Started";
                         let statusColor = "bg-zinc-100 text-zinc-500";
@@ -463,7 +531,9 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-5">
-                {drivers.length > 0 ? (
+                {loading ? (
+                  <ComplianceSkeleton />
+                ) : drivers.length > 0 ? (
                   drivers.map((driver) => {
                     const profile = driver.driverProfile;
                     const status = profile?.verificationStatus || "Pending";
@@ -629,7 +699,9 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
-                    {rides.length > 0 ? (
+                    {loading ? (
+                      <TableSkeleton cols={6} />
+                    ) : rides.length > 0 ? (
                       rides.map((ride) => {
                         const dateFormatted = new Date(ride.createdAt).toLocaleString("en-IN", {
                           dateStyle: "short",
@@ -804,7 +876,9 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
-                      {promos.length > 0 ? (
+                      {loading ? (
+                        <TableSkeleton cols={5} />
+                      ) : promos.length > 0 ? (
                         promos.map((promo) => {
                           const isExpired = new Date(promo.expiryDate) < new Date();
                           const dateFormatted = new Date(promo.expiryDate).toLocaleDateString("en-IN", {
@@ -903,7 +977,9 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
-                    {referrals.length > 0 ? (
+                    {loading ? (
+                      <TableSkeleton cols={5} />
+                    ) : referrals.length > 0 ? (
                       referrals.map((referral) => {
                         const dateFormatted = new Date(referral.createdAt).toLocaleString("en-IN", {
                           dateStyle: "medium",
@@ -1007,7 +1083,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="divide-y divide-zinc-100">
-                  {reviews.length > 0 ? (
+                  {loading ? (
+                    <ReviewFeedSkeleton />
+                  ) : reviews.length > 0 ? (
                     reviews.map((rev) => {
                       const dateFormatted = new Date(rev.createdAt).toLocaleString("en-IN", {
                         dateStyle: "medium",
@@ -1070,14 +1148,6 @@ export default function AdminPage() {
 
       </div>
 
-      {loading && (
-        <div className="fixed inset-0 bg-white/40 backdrop-blur-3xs z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center space-y-3.5 p-7 bg-white border border-zinc-200 shadow-2xl rounded-3xl">
-            <Loader2 className="w-8 h-8 text-zinc-950 animate-spin" />
-            <span className="text-[10px] font-mono font-black text-zinc-500 uppercase tracking-widest">Syncing Operational Systems...</span>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

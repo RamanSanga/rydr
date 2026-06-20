@@ -11,6 +11,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [role, setRole] = useState<"rider" | "driver" | null>(null);
   const [step, setStep] = useState(1);
 
@@ -31,8 +32,8 @@ export default function OnboardingPage() {
           router.push("/select-role");
           return;
         }
-        if (state.onboarded) {
-          router.push(state.role === "rider" ? "/rider" : "/driver");
+        if ((state as any).driverOnboarded) {
+          router.push("/driver");
           return;
         }
         setRole(state.role as "rider" | "driver");
@@ -40,8 +41,8 @@ export default function OnboardingPage() {
         if (state.role === "driver") {
           setDriverForm((prev) => ({
             ...prev,
-            fullName: "Rajesh Kumar",
-            phone: "+91 99887 76655",
+            fullName: (state as any).userName || "",
+            phone: "",
           }));
         }
       } catch (err) {
@@ -74,20 +75,11 @@ export default function OnboardingPage() {
       });
       setStep(3); // success screen
     } catch (err) {
-      alert("Something went wrong. Please try again.");
+      setSubmitError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="w-8 h-8 text-zinc-950 animate-spin" />
-        <span className="text-xs text-zinc-400 font-medium">Loading...</span>
-      </div>
-    );
-  }
 
   return (
     <main className="relative min-h-screen bg-zinc-50 text-zinc-900 antialiased pb-20 pt-28 flex flex-col justify-between">
@@ -120,9 +112,22 @@ export default function OnboardingPage() {
 
         <div className="bg-white rounded-3xl border border-zinc-200/60 shadow-sm p-6 sm:p-8">
           <AnimatePresence mode="wait">
+            {loading && (
+              <div className="space-y-5 animate-pulse">
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-3.5 bg-zinc-200 rounded w-16" />
+                      <div className="h-12 bg-zinc-100 rounded-xl w-full" />
+                    </div>
+                  ))}
+                </div>
+                <div className="h-12 bg-zinc-200 rounded-2xl w-full mt-4" />
+              </div>
+            )}
 
             {/* Step 1: Personal Details */}
-            {role === "driver" && step === 1 && (
+            {!loading && role === "driver" && step === 1 && (
               <motion.div
                 key="step1"
                 initial={{ opacity: 0, y: 12 }}
@@ -209,7 +214,7 @@ export default function OnboardingPage() {
                     <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
                       Vehicle Type
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
                         { id: "economy", label: "Economy", desc: "Hatchback / Sedan" },
                         { id: "premium", label: "Premium", desc: "SUV / MUV" },
@@ -274,20 +279,25 @@ export default function OnboardingPage() {
                   >
                     Back
                   </button>
-                  <button
-                    disabled={!driverForm.vehicleModel || !driverForm.vehicleNumber || submitting}
-                    onClick={handleDriverSubmit}
-                    className="flex-1 py-3.5 bg-zinc-950 hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-sm rounded-2xl transition-all flex items-center justify-center space-x-2"
-                  >
-                    {submitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>Start Driving</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </>
+                  <div className="flex-1 space-y-2">
+                    <button
+                      disabled={!driverForm.vehicleModel || !driverForm.vehicleNumber || submitting}
+                      onClick={handleDriverSubmit}
+                      className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-sm rounded-2xl transition-all flex items-center justify-center space-x-2"
+                    >
+                      {submitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <span>Start Driving</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                    {submitError && (
+                      <p className="text-xs text-red-600 font-semibold text-center">{submitError}</p>
                     )}
-                  </button>
+                  </div>
                 </div>
               </motion.div>
             )}

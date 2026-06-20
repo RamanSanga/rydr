@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, useCallback, useRef, memo, type ComponentType } from "react";
 import { CarFront, Circle, CircleDot, Coins, ShieldCheck, TrendingUp, UserCircle2, Loader2, Navigation, MapPin } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -10,7 +10,7 @@ const MapboxMap = dynamic(() => import("@/components/MapboxMap"), {
   ssr: false,
   loading: () => <div className="h-full w-full bg-zinc-100 animate-pulse" />,
 });
-import { getOnboardingState } from "@/actions/onboarding";
+
 import {
   acceptedRides,
   completedRides,
@@ -36,6 +36,77 @@ import {
 } from "@/actions/driver";
 import { getRouteDistance, calculateFare } from "@/lib/data";
 import { motion } from "framer-motion";
+
+const EMPTY_DRIVERS: any[] = [];
+
+const BackgroundMap = memo(function BackgroundMap({ availability }: { availability: DriverAvailability }) {
+  const [driverCoords, setDriverCoords] = useState<[number, number] | null>([77.0266, 28.4595]);
+
+  useEffect(() => {
+    let geoInterval: NodeJS.Timeout;
+
+    const pushLocation = () => {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            setDriverCoords([longitude, latitude]);
+            try {
+              if (availability === "Online") {
+                await updateDriverLocation(
+                  latitude,
+                  longitude,
+                  true
+                );
+              }
+            } catch (err) {
+              console.error("Failed to update driver location:", err);
+            }
+          },
+          async (err) => {
+            console.warn("Geolocation error. Cannot update driver location without real GPS coordinates:", err);
+            try {
+              if (availability === "Online") {
+                await updateDriverLocation(
+                  28.4595,
+                  77.0266,
+                  true
+                );
+              }
+            } catch (err2) {
+              console.error("Failed to update driver location with fallback:", err2);
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        );
+      }
+    };
+
+    pushLocation();
+    
+    if (availability === "Online") {
+      geoInterval = setInterval(pushLocation, 10000);
+    }
+
+    return () => {
+      if (geoInterval) clearInterval(geoInterval);
+    };
+  }, [availability]);
+
+  return (
+    <MapboxMap
+      pickupCoords={driverCoords}
+      destinationCoords={null}
+      pickupName="My Location"
+      destinationName=""
+      routeGeometry={null}
+      distanceMiles={null}
+      durationMins={null}
+      isLoadingRoute={false}
+      nearbyDrivers={EMPTY_DRIVERS}
+    />
+  );
+});
 
 type DriverPortalView = "overview" | "rides" | "earnings";
 type IconType = ComponentType<{ className?: string }>;
@@ -145,6 +216,7 @@ function PremiumAvailabilityToggle({ availability, setAvailability }: { availabi
 }
 
 function RideTile({
+  id,
   rider,
   route,
   meta,
@@ -155,19 +227,31 @@ function RideTile({
   onDecline,
   onUpdateStatus,
   onComplete,
+  isSubmitting,
+  submittingAction,
 }: {
+  id: string;
   rider: string;
   route: string;
   meta: string;
   amount: string;
   tier: "Daily" | "EV Eco" | "Luxe";
   status?: DriverRideStatus | string;
-  onAccept?: () => void;
-  onDecline?: () => void;
-  onUpdateStatus?: (status: string) => void;
-  onComplete?: () => void;
+  onAccept?: (id: string) => void;
+  onDecline?: (id: string) => void;
+  onUpdateStatus?: (id: string, status: string) => void;
+  onComplete?: (id: string) => void;
+  isSubmitting?: boolean;
+  submittingAction?: string | null;
 }) {
   const [secondsLeft, setSecondsLeft] = useState(15);
+  const onDeclineRef = useRef(onDecline);
+  const onAcceptRef = useRef(onAccept);
+
+  useEffect(() => {
+    onDeclineRef.current = onDecline;
+    onAcceptRef.current = onAccept;
+  }, [onDecline, onAccept]);
 
   useEffect(() => {
     if (!onAccept || !onDecline) return;
@@ -177,7 +261,9 @@ function RideTile({
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          onDecline(); // decline automatically when hits 0 to offer to next candidate!
+          if (onDeclineRef.current) {
+            onDeclineRef.current(id);
+          }
           return 0;
         }
         return prev - 1;
@@ -185,7 +271,7 @@ function RideTile({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [onAccept, onDecline]);
+  }, [id, onAccept, onDecline]);
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.015)] hover:border-zinc-400 transition-all duration-200">
@@ -244,52 +330,81 @@ function RideTile({
         <div className="mt-4 flex items-center gap-2">
           {onDecline && (
             <button
-              onClick={onDecline}
-              className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97"
+              onClick={() => onDecline(id)}
+              disabled={isSubmitting}
+              className="flex-1 min-h-[48px] py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
             >
-              Pass
+              {isSubmitting && submittingAction === "decline" ? (
+                <Loader2 className="w-4 h-4 animate-spin text-zinc-700" />
+              ) : (
+                "Pass"
+              )}
             </button>
           )}
           {onAccept && (
             <button
-              onClick={onAccept}
-              className="flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 shadow-sm flex items-center justify-center space-x-1.5"
+              onClick={() => onAccept(id)}
+              disabled={isSubmitting}
+              className="flex-1 min-h-[48px] py-2.5 bg-zinc-955 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
             >
-              <span>Accept Trip</span>
-              <span className="bg-white/20 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
-                {secondsLeft}s
-              </span>
+              {isSubmitting && submittingAction === "accept" ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <span>Accept Trip</span>
+                  <span className="bg-white/20 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+                    {secondsLeft}s
+                  </span>
+                </>
+              )}
             </button>
           )}
         </div>
       )}
-
+      
       {/* Active Trip Progress buttons */}
       {(onUpdateStatus || onComplete) && (
         <div className="mt-4">
           {status === "Accepted" && onUpdateStatus && (
             <button
-              onClick={() => onUpdateStatus("Driver Arriving")}
-              className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97"
+              onClick={() => onUpdateStatus(id, "Driver Arriving")}
+              disabled={isSubmitting}
+              className="w-full min-h-[48px] py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
             >
-              Mark Arrived
+              {isSubmitting && submittingAction === "Driver Arriving" ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                "Mark Arrived"
+              )}
             </button>
           )}
           {status === "Driver Arriving" && onUpdateStatus && (
             <button
-              onClick={() => onUpdateStatus("On Trip")}
-              className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97"
+              onClick={() => onUpdateStatus(id, "On Trip")}
+              disabled={isSubmitting}
+              className="w-full min-h-[48px] py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
             >
-              Start Ride
+              {isSubmitting && submittingAction === "On Trip" ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                "Start Ride"
+              )}
             </button>
           )}
           {status === "On Trip" && onComplete && (
             <button
-              onClick={onComplete}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 flex items-center justify-center space-x-1.5"
+              onClick={() => onComplete(id)}
+              disabled={isSubmitting}
+              className="w-full min-h-[48px] py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Complete Trip</span>
+              {isSubmitting && submittingAction === "complete" ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Complete Trip</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -302,8 +417,8 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
   const router = useRouter();
   const pathname = usePathname();
   const [availability, setAvailability] = useState<DriverAvailability>("Offline"); // Default to Offline when checking status
-  const [driverCoords, setDriverCoords] = useState<[number, number] | null>([77.0266, 28.4595]);
-  const [loading, setLoading] = useState(true);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [submittingAction, setSubmittingAction] = useState<string | null>(null);
   const [greeting, setGreeting] = useState(driverGreetings[0]);
 
 
@@ -322,26 +437,30 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     setGreeting(driverGreetings[Math.floor(Math.random() * driverGreetings.length)]);
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
-      const state = await getOnboardingState();
-      if (!state.success || !state.roleSelected) {
-        router.push("/select-role");
+
+
+
+      if (view === "earnings") {
+        const dbStats = await fetchDriverStats();
+        setStats(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(dbStats)) return prev;
+          return dbStats;
+        });
         return;
       }
-      if (!state.onboarded || state.role !== "driver") {
-        router.push("/onboarding");
-        return;
-      }
 
-
-
-      const [dbRequests, dbActive, dbCompleted, dbStats] = await Promise.all([
+      const promises: Promise<any>[] = [
         fetchAvailableRideRequests(),
         fetchDriverActiveRides(),
-        fetchDriverCompletedRides(),
-        fetchDriverStats(),
-      ]);
+      ];
+
+      if (view === "rides") {
+        promises.push(fetchDriverCompletedRides());
+      }
+
+      const [dbRequests, dbActive, dbCompleted] = await Promise.all(promises);
 
       const formattedRequests = dbRequests.map((r: any) => {
         const dist = getRouteDistance(r.pickup, r.destination);
@@ -373,30 +492,38 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         };
       });
 
-      const formattedCompleted = dbCompleted.map((r: any) => {
-        const dist = getRouteDistance(r.pickup, r.destination);
-        const fare = calculateFare(dist, r.rideType);
-        return {
-          id: r.id,
-          rider: r.user?.name || "Passenger",
-          route: `${r.pickup.split(",")[0]} ➔ ${r.destination.split(",")[0]}`,
-          payout: r.fare ? `₹${r.fare}` : `₹${fare}`,
-          rating: "5.0",
-          time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-          tier: r.rideType === "economy" ? "EV Eco" : r.rideType === "premium" ? "Daily" : "Luxe",
-        };
+      setRequests(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(formattedRequests)) return prev;
+        return formattedRequests;
+      });
+      setAccepted(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(formattedActive)) return prev;
+        return formattedActive;
       });
 
-      setRequests(formattedRequests);
-      setAccepted(formattedActive);
-      setCompleted(formattedCompleted);
-      setStats(dbStats);
+      if (view === "rides" && dbCompleted) {
+        const formattedCompleted = dbCompleted.map((r: any) => {
+          const dist = getRouteDistance(r.pickup, r.destination);
+          const fare = calculateFare(dist, r.rideType);
+          return {
+            id: r.id,
+            rider: r.user?.name || "Passenger",
+            route: `${r.pickup.split(",")[0]} ➔ ${r.destination.split(",")[0]}`,
+            payout: r.fare ? `₹${r.fare}` : `₹${fare}`,
+            rating: "5.0",
+            time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+            tier: r.rideType === "economy" ? "EV Eco" : r.rideType === "premium" ? "Daily" : "Luxe",
+          };
+        });
+        setCompleted(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(formattedCompleted)) return prev;
+          return formattedCompleted;
+        });
+      }
     } catch (err) {
       console.error("Error loading driver dashboard:", err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [view]);
 
   useEffect(() => {
     loadDashboardData();
@@ -407,111 +534,69 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
     }, 10000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [loadDashboardData]);
 
-  // Real-time Geolocation Polling
-  useEffect(() => {
-    let geoInterval: NodeJS.Timeout;
-
-    const pushLocation = () => {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            setDriverCoords([longitude, latitude]);
-            try {
-              await updateDriverLocation(
-                latitude,
-                longitude,
-                availability === "Online"
-              );
-            } catch (err) {
-              console.error("Failed to update driver location:", err);
-            }
-          },
-          async (err) => {
-            console.warn("Geolocation error. Cannot update driver location without real GPS coordinates:", err);
-          },
-          { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-        );
-      }
-    };
-
-    if (availability === "Online") {
-      pushLocation();
-      geoInterval = setInterval(pushLocation, 10000);
-    } else {
-      pushLocation();
-    }
-
-    return () => {
-      if (geoInterval) clearInterval(geoInterval);
-    };
-  }, [availability]);
-
-  const handleAcceptRequest = async (id: string) => {
+  const handleAcceptRequest = useCallback(async (id: string) => {
     try {
-      setLoading(true);
+      setSubmittingId(id);
+      setSubmittingAction("accept");
       await acceptRideAction(id);
       await loadDashboardData();
     } catch (err) {
       console.error("Failed to accept ride:", err);
     } finally {
-      setLoading(false);
+      setSubmittingId(null);
+      setSubmittingAction(null);
     }
-  };
+  }, [loadDashboardData]);
 
-  const handleDeclineRequest = async (id: string) => {
+  const handleDeclineRequest = useCallback(async (id: string) => {
     try {
-      setLoading(true);
+      setSubmittingId(id);
+      setSubmittingAction("decline");
       await rejectRideAction(id);
       await loadDashboardData();
     } catch (err) {
       console.error("Failed to reject ride:", err);
     } finally {
-      setLoading(false);
+      setSubmittingId(null);
+      setSubmittingAction(null);
     }
-  };
+  }, [loadDashboardData]);
 
-  const handleCompleteRide = async (id: string) => {
+  const handleCompleteRide = useCallback(async (id: string) => {
     try {
-      setLoading(true);
+      setSubmittingId(id);
+      setSubmittingAction("complete");
       await completeRideAction(id);
       await loadDashboardData();
     } catch (err) {
       console.error("Failed to complete ride:", err);
     } finally {
-      setLoading(false);
+      setSubmittingId(null);
+      setSubmittingAction(null);
     }
-  };
+  }, [loadDashboardData]);
 
-  const handleUpdateRideStatus = async (id: string, newStatus: string) => {
+  const handleUpdateRideStatus = useCallback(async (id: string, newStatus: string) => {
     try {
-      setLoading(true);
+      setSubmittingId(id);
+      setSubmittingAction(newStatus);
       await updateRideStatusAction(id, newStatus);
       await loadDashboardData();
     } catch (err) {
       console.error("Failed to update ride status:", err);
     } finally {
-      setLoading(false);
+      setSubmittingId(null);
+      setSubmittingAction(null);
     }
-  };
+  }, [loadDashboardData]);
 
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-zinc-955 text-zinc-900 antialiased">
       {/* Dynamic Background Map */}
       <div className="absolute inset-0 z-0 w-full h-full">
-        <MapboxMap
-          pickupCoords={driverCoords}
-          destinationCoords={null}
-          pickupName="My Location"
-          destinationName=""
-          routeGeometry={null}
-          distanceMiles={null}
-          durationMins={null}
-          isLoadingRoute={false}
-          nearbyDrivers={[]}
-        />
+        <BackgroundMap availability={availability} />
       </div>
 
       {/* Floating HUD Container */}
@@ -576,18 +661,29 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                     accepted.map((ride) => (
                       <RideTile
                         key={ride.id}
+                        id={ride.id}
                         rider={ride.rider}
                         route={ride.route}
                         meta={ride.eta}
                         amount={ride.fare}
                         tier={ride.tier}
                         status={ride.status}
-                        onUpdateStatus={(newStatus) => handleUpdateRideStatus(ride.id, newStatus)}
-                        onComplete={() => handleCompleteRide(ride.id)}
+                        onUpdateStatus={handleUpdateRideStatus}
+                        onComplete={handleCompleteRide}
+                        isSubmitting={submittingId === ride.id}
+                        submittingAction={submittingAction}
                       />
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-400 italic py-2">No active rides.</p>
+                    <div className="border border-dashed border-zinc-200 rounded-2xl p-6 text-center space-y-2.5 bg-zinc-50/50">
+                      <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center mx-auto text-zinc-400">
+                        <Navigation className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-zinc-700">No active dispatches</h5>
+                        <p className="text-[10px] text-zinc-400 leading-normal max-w-[200px] mx-auto">When you accept a ride request, it will appear here as an active dispatch.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -599,18 +695,29 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                     requests.map((request) => (
                       <RideTile
                         key={request.id}
+                        id={request.id}
                         rider={request.rider}
                         route={request.pickup}
                         meta={`${request.destination} · ${request.distance}`}
                         amount={request.fare}
                         tier={request.tier}
                         status={request.status}
-                        onAccept={() => handleAcceptRequest(request.id)}
-                        onDecline={() => handleDeclineRequest(request.id)}
+                        onAccept={handleAcceptRequest}
+                        onDecline={handleDeclineRequest}
+                        isSubmitting={submittingId === request.id}
+                        submittingAction={submittingAction}
                       />
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-400 italic py-2">No requests right now.</p>
+                    <div className="border border-dashed border-zinc-200 rounded-2xl p-6 text-center space-y-2.5 bg-zinc-50/50">
+                      <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center mx-auto text-zinc-400">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-zinc-700">No requests nearby</h5>
+                        <p className="text-[10px] text-zinc-400 leading-normal max-w-[200px] mx-auto">We are scanning the area. Stand by at local hot spots for premium dispatches.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -620,6 +727,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                     completed.map((ride) => (
                       <RideTile
                         key={ride.id}
+                        id={ride.id}
                         rider={ride.rider}
                         route={ride.route}
                         meta={`${ride.time} · ★ 5.0`}
@@ -628,7 +736,15 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       />
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-400 italic py-2">No completed runs recorded today.</p>
+                    <div className="border border-dashed border-zinc-200 rounded-2xl p-6 text-center space-y-2.5 bg-zinc-50/50">
+                      <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center mx-auto text-zinc-400">
+                        <Coins className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-zinc-700">No completed runs</h5>
+                        <p className="text-[10px] text-zinc-400 leading-normal max-w-[200px] mx-auto">Your completed rides for today will be listed here with earnings breakdown.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -711,15 +827,25 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={() => handleDeclineRequest(requests[0].id)}
-                      className="flex-1 py-3 min-h-[44px] bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      disabled={!!submittingId}
+                      className="flex-1 py-3 min-h-[44px] bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                     >
-                      Decline
+                      {submittingId === requests[0].id && submittingAction === "decline" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Decline"
+                      )}
                     </button>
                     <button
                       onClick={() => handleAcceptRequest(requests[0].id)}
-                      className="flex-1 py-3 min-h-[44px] bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                      disabled={!!submittingId}
+                      className="flex-1 py-3 min-h-[44px] bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                     >
-                      Accept Trip
+                      {submittingId === requests[0].id && submittingAction === "accept" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Accept Trip"
+                      )}
                     </button>
                   </div>
                 </div>
@@ -743,26 +869,35 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                     {accepted[0].status === "Accepted" && (
                       <button
                         onClick={() => handleUpdateRideStatus(accepted[0].id, "Driver Arriving")}
-                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        disabled={!!submittingId}
+                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                       >
-                        I&apos;ve Arrived
+                        {submittingId === accepted[0].id ? <Loader2 className="w-4 h-4 animate-spin" /> : "I've Arrived"}
                       </button>
                     )}
                     {accepted[0].status === "Driver Arriving" && (
                       <button
                         onClick={() => handleUpdateRideStatus(accepted[0].id, "On Trip")}
-                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        disabled={!!submittingId}
+                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                       >
-                        Start Trip
+                        {submittingId === accepted[0].id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Trip"}
                       </button>
                     )}
                     {accepted[0].status === "On Trip" && (
                       <button
                         onClick={() => handleCompleteRide(accepted[0].id)}
-                        className="w-full py-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5"
+                        disabled={!!submittingId}
+                        className="w-full py-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
                       >
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Complete Trip</span>
+                        {submittingId === accepted[0].id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <ShieldCheck className="w-4 h-4" />
+                            <span>Complete Trip</span>
+                          </>
+                        )}
                       </button>
                     )}
                   </div>
@@ -815,15 +950,6 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
 
       </div>
 
-      {/* Loading spinner */}
-      {loading && (
-        <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
-          <div className="bg-white px-5 py-4 rounded-2xl shadow-xl flex items-center space-x-3 border border-zinc-200/80">
-            <Loader2 className="w-5 h-5 text-zinc-950 animate-spin" />
-            <span className="text-xs font-bold text-zinc-700">Updating...</span>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

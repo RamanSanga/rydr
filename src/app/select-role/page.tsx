@@ -22,6 +22,7 @@ export default function RoleSelectionPage() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<RydrRole | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const roleOptions: RoleOption[] = [
     {
@@ -51,10 +52,15 @@ export default function RoleSelectionPage() {
     try {
       // Trigger Clerk metadata write action
       await selectUserRole(role);
-      router.push("/dashboard");
+      if (role === "rider") {
+        router.push("/rider");
+      } else {
+        router.push("/onboarding");
+      }
     } catch (e) {
       setIsSubmitting(false);
-      alert("Something went wrong saving your role. Please try again.");
+      setSelectedRole(null);
+      setSubmitError("Something went wrong. Please try again.");
     }
   };
 
@@ -125,6 +131,14 @@ export default function RoleSelectionPage() {
             );
           })}
         </div>
+
+        {submitError && (
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3 text-center text-sm text-red-700 font-semibold">
+              {submitError}
+            </div>
+          </div>
+        )}
 
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { MapPin, Navigation, Compass, Shield, Route, Info } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -17,7 +17,7 @@ interface MapboxMapProps {
   nearbyDrivers?: any[];
 }
 
-export default function MapboxMap({
+function MapboxMap({
   pickupCoords,
   destinationCoords,
   pickupName,
@@ -412,3 +412,5 @@ export default function MapboxMap({
     </div>
   );
 }
+
+export default memo(MapboxMap);

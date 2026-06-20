@@ -22,31 +22,33 @@ export async function getOnboardingState() {
   }
 
   const roleSelected = !!user.role;
-  let onboarded = false;
-
-  if (user.role === "rider") {
-    onboarded = true;
-    // Repair/Auto-create RiderProfile if missing for existing database users
-    if (!user.riderProfile) {
-      await prisma.riderProfile.create({
-        data: {
-          userId,
-          onboarded: true,
-          phone: "+91 98765 43210",
-          dob: "01/01/1990",
-          language: "English",
-        },
-      });
-    }
-  } else if (user.role === "driver" && user.driverProfile) {
-    onboarded = user.driverProfile.onboarded;
+  
+  // Auto-provision RiderProfile if missing for any registered user (so everyone can be a rider)
+  if (!user.riderProfile) {
+    user.riderProfile = await prisma.riderProfile.create({
+      data: {
+        userId,
+        onboarded: true,
+        phone: "+91 98765 43210",
+        dob: "01/01/1990",
+        language: "English",
+      },
+    });
   }
+
+  const riderOnboarded = user.riderProfile.onboarded;
+  const driverOnboarded = user.driverProfile?.onboarded || false;
+  const onboarded = user.role === "driver" ? driverOnboarded : riderOnboarded;
 
   return {
     success: true,
     roleSelected,
     role: user.role,
     onboarded,
+    riderOnboarded,
+    driverOnboarded,
+    userName: user.name,
+    userEmail: user.email,
     riderProfile: user.riderProfile,
     driverProfile: user.driverProfile,
   };
@@ -106,13 +108,13 @@ export async function saveDriverOnboarding(data: {
     where: { userId },
     update: {
       ...data,
-      verificationStatus: "Pending", // Reset to pending on submit
+      verificationStatus: "Approved", // Approved immediately on submit
       onboarded: true,
     },
     create: {
       userId,
       ...data,
-      verificationStatus: "Pending",
+      verificationStatus: "Approved",
       onboarded: true,
     },
   });

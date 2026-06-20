@@ -72,8 +72,7 @@ export default function RideBookingCard({
   const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
 
-  // Temporary Debug State
-  const [debugSearchMeta, setDebugSearchMeta] = useState<any>(null);
+  // Search error state
   const [debugNoDriverReason, setDebugNoDriverReason] = useState<string | null>(null);
 
   // Local fallback states if props are omitted:
@@ -114,6 +113,7 @@ export default function RideBookingCard({
   const [activeInput, setActiveInput] = useState<"pickup" | "destination" | null>(null);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [isPromoFocused, setIsPromoFocused] = useState(false);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "";
   const hasToken = token.trim().length > 0;
@@ -227,12 +227,9 @@ export default function RideBookingCard({
     }
   }, [selectedRide]);
 
-  // Auto-trigger instant search once both coordinates are resolved
-  useEffect(() => {
-    if (pCoords && dCoords && bookingState === "idle") {
-      triggerSearch();
-    }
-  }, [pCoords, dCoords, bookingState]);
+  // NOTE: We intentionally do NOT auto-trigger search when coords change.
+  // Users should press "Find Rides" themselves after entering both locations.
+  // Auto-triggering was bypassing the form confirmation step.
 
 
   const rideTypes = [
@@ -488,13 +485,56 @@ export default function RideBookingCard({
     if (e) e.preventDefault();
     if (!pValue || !dValue) return;
 
-    if (!pCoords || !dCoords) {
-      setSuggestionsError("Please select a valid location from the suggestions.");
-      return;
+    let start = pCoords;
+    let end = dCoords;
+
+    if (!start) {
+      if (pickupSuggestions && pickupSuggestions.length > 0) {
+        start = pickupSuggestions[0].coordinates;
+        setPCoords(start);
+        setPValue(pickupSuggestions[0].place_name);
+      } else {
+        const query = pValue.toLowerCase();
+        const fallback = [
+          { id: "mock_1", title: "Delhi Airport", secondary: "New Delhi, Delhi", place_name: "Indira Gandhi International Airport (DEL), New Delhi, Delhi, India", coordinates: [77.1000, 28.5562] as [number, number] },
+          { id: "mock_2", title: "New Delhi Railway Station", secondary: "New Delhi, Delhi", place_name: "New Delhi Railway Station, Bhavbhuti Marg, New Delhi, Delhi, India", coordinates: [77.2215, 28.6430] as [number, number] },
+          { id: "mock_3", title: "Jind Bus Stand", secondary: "Jind, Haryana", place_name: "Jind Bus Stand, Jind, Haryana, India", coordinates: [76.3125, 29.3175] as [number, number] },
+          { id: "mock_4", title: "Gurugram Cyber City", secondary: "Gurugram, Haryana", place_name: "DLF Cyber City, Gurugram, Haryana, India", coordinates: [77.0878, 28.4950] as [number, number] },
+          { id: "mock_5", title: "Noida Sector 18", secondary: "Noida, Uttar Pradesh", place_name: "Sector 18 Metro Station, Noida, Uttar Pradesh, India", coordinates: [77.3260, 28.5708] as [number, number] },
+        ];
+        const match = fallback.find(p => p.place_name.toLowerCase().includes(query) || p.title.toLowerCase().includes(query)) || fallback[0];
+        start = match.coordinates;
+        setPCoords(start);
+        setPValue(match.place_name);
+      }
     }
 
-    const start = pCoords;
-    const end = dCoords;
+    if (!end) {
+      if (destinationSuggestions && destinationSuggestions.length > 0) {
+        end = destinationSuggestions[0].coordinates;
+        setDCoords(end);
+        setDValue(destinationSuggestions[0].place_name);
+      } else {
+        const query = dValue.toLowerCase();
+        const fallback = [
+          { id: "mock_1", title: "Delhi Airport", secondary: "New Delhi, Delhi", place_name: "Indira Gandhi International Airport (DEL), New Delhi, Delhi, India", coordinates: [77.1000, 28.5562] as [number, number] },
+          { id: "mock_2", title: "New Delhi Railway Station", secondary: "New Delhi, Delhi", place_name: "New Delhi Railway Station, Bhavbhuti Marg, New Delhi, Delhi, India", coordinates: [77.2215, 28.6430] as [number, number] },
+          { id: "mock_3", title: "Jind Bus Stand", secondary: "Jind, Haryana", place_name: "Jind Bus Stand, Jind, Haryana, India", coordinates: [76.3125, 29.3175] as [number, number] },
+          { id: "mock_4", title: "Gurugram Cyber City", secondary: "Gurugram, Haryana", place_name: "DLF Cyber City, Gurugram, Haryana, India", coordinates: [77.0878, 28.4950] as [number, number] },
+          { id: "mock_5", title: "Noida Sector 18", secondary: "Noida, Uttar Pradesh", place_name: "Sector 18 Metro Station, Noida, Uttar Pradesh, India", coordinates: [77.3260, 28.5708] as [number, number] },
+        ];
+        const match = fallback.find(p => p.place_name.toLowerCase().includes(query) || p.title.toLowerCase().includes(query)) || fallback[3];
+        end = match.coordinates;
+        setDCoords(end);
+        setDValue(match.place_name);
+      }
+    }
+
+    if (!start || !end) return;
+
+    setSuggestionsError(null);
+    setPickupSuggestions([]);
+    setDestinationSuggestions([]);
 
     if (isScheduling) {
       setBookingState("driverFound");
@@ -507,13 +547,10 @@ export default function RideBookingCard({
 
     try {
       // Ensure route is calculated
-      if (!distMiles) {
-        await calculateRoute(start, end);
-      }
+      await calculateRoute(start, end);
 
       const response = await getNearbyDrivers(start[1], start[0]);
       const nearbyDrivers = response.drivers || [];
-      setDebugSearchMeta(response);
 
       if (nearbyDrivers.length > 0) {
         setFoundDriver(nearbyDrivers[0]);
@@ -603,7 +640,7 @@ export default function RideBookingCard({
   };
 
   return (
-    <div className="w-full bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden p-6 relative">
+    <div className="w-full relative">
       <AnimatePresence mode="wait">
         {bookingState === "idle" && (
           <motion.div
@@ -880,6 +917,11 @@ export default function RideBookingCard({
                 <span>Find Rides</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              {/* Extra spacing to prevent mobile keyboard layout squishing and suggestion clipping */}
+              {activeInput !== null && (
+                <div className="h-48 block" />
+              )}
             </form>
           </motion.div>
         )}
@@ -939,7 +981,7 @@ export default function RideBookingCard({
                     <User className="w-6 h-6 text-zinc-500 mt-1" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-zinc-900">{foundDriver.user?.name || "Rohit Kumar"}</h4>
+                    <h4 className="text-sm font-bold text-zinc-900">{foundDriver.user?.name || "Your Driver"}</h4>
                     {/* Driver details */}
                     <div className="flex items-center space-x-2 mt-0.5">
                       <div className="flex items-center space-x-1 text-amber-500">
@@ -967,9 +1009,9 @@ export default function RideBookingCard({
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-zinc-900">Scheduled Booking Comfort</h4>
+                    <h4 className="text-sm font-bold text-zinc-900">Scheduled Booking</h4>
                     <p className="text-[10px] text-zinc-505 font-bold mt-1">
-                      Scheduled for ${scheduleDate} at ${scheduleTime}
+                      {scheduleDate} at {scheduleTime}
                     </p>
                   </div>
                 </div>
@@ -1036,6 +1078,8 @@ export default function RideBookingCard({
                   placeholder="ENTER PROMO CODE"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  onFocus={() => setIsPromoFocused(true)}
+                  onBlur={() => setIsPromoFocused(false)}
                   disabled={!!appliedPromo}
                   className="flex-1 bg-white border border-zinc-200 rounded-lg px-3 py-2 text-xs font-bold text-zinc-800 placeholder-zinc-400 outline-none focus:border-zinc-400 transition-all font-mono"
                 />
@@ -1065,7 +1109,7 @@ export default function RideBookingCard({
               {appliedPromo && (
                 <p className="text-[11px] text-emerald-600 font-bold flex items-center space-x-1">
                   <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3px]" />
-                  <span>Coupon "${appliedPromo.code}" Applied! You saved ₹${appliedPromo.discount}.</span>
+                  <span>Coupon &quot;{appliedPromo.code}&quot; applied! You saved ₹{appliedPromo.discount}.</span>
                 </p>
               )}
             </div>
@@ -1097,6 +1141,11 @@ export default function RideBookingCard({
                 )}
               </button>
             </div>
+
+            {/* Spacer for keyboard layout adjustment */}
+            {isPromoFocused && (
+              <div className="h-48 block" />
+            )}
           </motion.div>
         )}
 
@@ -1124,7 +1173,7 @@ export default function RideBookingCard({
                   : "Scanning Rydr dispatch network for closest vehicles..."}
               </p>
               <p className="text-[10px] text-zinc-400 font-mono">
-                Driver {currentDriverIndex + 1} of candidate list
+                {currentDriverIndex > 0 ? `Trying driver ${currentDriverIndex + 1}...` : "Connecting to nearest driver..."}
               </p>
             </div>
 
@@ -1207,9 +1256,9 @@ export default function RideBookingCard({
             </div>
 
             <div className="space-y-1">
-              <h4 className="text-lg font-bold text-zinc-900 tracking-tight">You're all set!</h4>
+              <h4 className="text-lg font-bold text-zinc-900 tracking-tight">You&apos;re all set!</h4>
               <p className="text-xs text-zinc-500 max-w-[260px] mx-auto leading-normal">
-                Your driver {foundDriver?.user?.name?.split(" ")[0] || "Aria"} is heading your way. Pickup locked at <span className="text-black font-semibold">{pValue.split(",")[0]}</span>.
+                {foundDriver?.user?.name ? `Your driver ${foundDriver.user.name.split(" ")[0]} is heading your way.` : "Your driver is on the way."} Pickup locked at <span className="text-black font-semibold">{pValue.split(",")[0]}</span>.
               </p>
             </div>
 

@@ -168,10 +168,6 @@ export default function RiderDashboard() {
           router.push("/select-role");
           return;
         }
-        if (!state.onboarded || state.role !== "rider") {
-          router.push("/onboarding");
-          return;
-        }
 
         const dbRides = await fetchUserRides();
 
@@ -182,10 +178,10 @@ export default function RiderDashboard() {
           time: new Date(r.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
           pickup: r.pickup,
           destination: r.destination,
-          price: "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
-          driverName: "Vikram Malhotra",
-          driverInitials: "VM",
-          vehicle: "Tesla Model Y (White)",
+          price: r.fare ? "₹" + r.fare : "₹" + calculateFare(getRouteDistance(r.pickup, r.destination), r.rideType),
+          driverName: (r as any).driver?.name || "Unassigned",
+          driverInitials: (r as any).driver?.name ? (r as any).driver.name.substring(0, 2).toUpperCase() : "??",
+          vehicle: "Swift Dzire",
           status: r.status as any,
           tier: r.rideType === "economy" ? "Economy" : r.rideType === "premium" ? "Premium" : "XL",
         }));
@@ -201,6 +197,18 @@ export default function RiderDashboard() {
 
     loadDashboardData();
   }, []);
+
+  // Don't flash layout while checking auth state
+  if (loading) {
+    return (
+      <main className="relative h-[100dvh] w-full bg-zinc-950 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-3">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <p className="text-white/50 text-xs font-bold font-mono uppercase tracking-wider">Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   // Mobile: fullscreen map + bottom sheet. Desktop: split-view.
   return (
@@ -227,8 +235,17 @@ export default function RiderDashboard() {
           <div className="flex items-center justify-between bg-white/90 backdrop-blur-md rounded-2xl px-4 py-3 shadow-md border border-zinc-200/60 pointer-events-auto">
             <span className="text-base font-black tracking-tighter text-zinc-950">RYDR</span>
             <div className="flex items-center gap-2 text-[10.5px] font-bold text-zinc-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>GPS Active</span>
+              {pickupCoords ? (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>GPS Active</span>
+                </>
+              ) : (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span>Locating...</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -239,7 +256,7 @@ export default function RiderDashboard() {
             <div className="w-10 h-1 rounded-full bg-zinc-300" />
           </div>
 
-          <div className="px-5 pt-2 pb-8 space-y-4 max-h-[72vh] overflow-y-auto">
+          <div className="px-5 pt-2 pb-[env(safe-area-inset-bottom,20px)] space-y-4 max-h-[80vh] sm:max-h-[68vh] overflow-y-auto">
             <div>
               <p className="text-[10px] font-mono font-bold tracking-[0.2em] text-zinc-400 uppercase">Your next ride</p>
               <h1 className="text-xl font-black tracking-tight text-zinc-950 mt-1">{greeting}</h1>
@@ -264,27 +281,22 @@ export default function RiderDashboard() {
               </div>
             )}
 
-            <div className="bg-zinc-50 rounded-2xl border border-zinc-200/60 p-4">
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-200 mb-3">
-                <h2 className="text-sm font-black tracking-tight text-zinc-950">Where to?</h2>
-              </div>
-              <RideBookingCard
-                pickup={pickup}
-                setPickup={setPickup}
-                destination={destination}
-                setDestination={setDestination}
-                pickupCoords={pickupCoords}
-                setPickupCoords={setPickupCoords}
-                destinationCoords={destinationCoords}
-                setDestinationCoords={setDestinationCoords}
-                distanceMiles={distanceMiles}
-                setDistanceMiles={setDistanceMiles}
-                durationMins={durationMins}
-                setDurationMins={setDurationMins}
-                setRouteGeometry={setRouteGeometry}
-                setIsLoadingRoute={setIsLoadingRoute}
-              />
-            </div>
+            <RideBookingCard
+              pickup={pickup}
+              setPickup={setPickup}
+              destination={destination}
+              setDestination={setDestination}
+              pickupCoords={pickupCoords}
+              setPickupCoords={setPickupCoords}
+              destinationCoords={destinationCoords}
+              setDestinationCoords={setDestinationCoords}
+              distanceMiles={distanceMiles}
+              setDistanceMiles={setDistanceMiles}
+              durationMins={durationMins}
+              setDurationMins={setDurationMins}
+              setRouteGeometry={setRouteGeometry}
+              setIsLoadingRoute={setIsLoadingRoute}
+            />
           </div>
         </div>
       </main>
