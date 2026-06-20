@@ -677,24 +677,25 @@ export default function RideBookingCard({
 
               {/* Feature 6: Simulated Surge Pricing Banner */}
               {!isScheduling && getSurgeInfo().isSurge && (
-                <div className="bg-amber-50 border border-amber-200/70 rounded-xl p-3 flex items-center space-x-2.5 text-amber-800 text-[11px] font-bold shadow-3xs leading-relaxed">
+                <div className="bg-amber-50 border border-amber-250/70 rounded-xl p-3 flex items-center space-x-2.5 text-amber-800 text-[11px] font-bold shadow-3xs leading-relaxed">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping shrink-0" />
                   <span>⚡ High Demand Area • Surge Active ({getSurgeInfo().multiplier}x) — {getSurgeInfo().label}</span>
                 </div>
               )}
-
               {/* Pickup & Destination Inputs */}
-              <div className="relative flex flex-col space-y-3.5">
-                {/* Connecting Line */}
-                <div className="absolute left-6 top-10 bottom-10 w-[1px] bg-zinc-200 pointer-events-none" />
+              <div className="relative border border-zinc-200 rounded-xl bg-white shadow-xs overflow-hidden flex items-stretch pr-3.5 mb-1">
+                {/* Connecting Line and Indicators on the left */}
+                <div className="flex flex-col items-center justify-between py-6 pl-4 pr-3 shrink-0 select-none">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                  <div className="w-[1.5px] flex-1 my-1.5 border-l border-dashed border-zinc-300" />
+                  <div className="w-2 h-2 bg-black shrink-0" />
+                </div>
 
-                {/* Pickup Field */}
-                <div ref={pickupInputRef} className="relative">
-                  <div className="flex items-center space-x-3 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus-within:border-zinc-400 focus-within:bg-white transition-colors duration-150">
-                    <div className="p-1 bg-white border border-zinc-200 rounded-md text-zinc-500">
-                      <MapPin className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1">
+                {/* Vertical inputs list */}
+                <div className="flex-grow flex flex-col divide-y divide-zinc-100 min-w-0">
+                  {/* Pickup Field */}
+                  <div ref={pickupInputRef} className="relative py-2.5 flex items-center min-w-0">
+                    <div className="flex-1 min-w-0">
                       <input
                         name="pickup"
                         type="text"
@@ -703,8 +704,6 @@ export default function RideBookingCard({
                         onChange={(e) => {
                           setPValue(e.target.value);
                           setActiveInput("pickup");
-                          
-                          // Debounce geocoder requests to respect Nominatim limits
                           if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
                           debounceTimeoutRef.current = setTimeout(() => {
                             fetchSuggestions(e.target.value, "pickup");
@@ -716,7 +715,7 @@ export default function RideBookingCard({
                         }}
                         required
                         autoComplete="off"
-                        className="w-full bg-transparent border-0 outline-0 p-0 text-sm text-zinc-900 placeholder-zinc-450 focus:ring-0 font-medium"
+                        className="w-full bg-transparent border-0 outline-0 p-0 text-sm text-zinc-900 placeholder-zinc-400 focus:ring-0 font-medium"
                       />
                     </div>
                     {pValue && (
@@ -728,66 +727,61 @@ export default function RideBookingCard({
                           setDistMiles(null);
                           setRGeom(null);
                         }}
-                        className="text-zinc-400 hover:text-black text-xs font-semibold cursor-pointer"
+                        className="text-zinc-400 hover:text-black text-xs font-semibold cursor-pointer pr-1"
                       >
                         Clear
                       </button>
                     )}
+
+                    {/* Autocomplete Dropdown List */}
+                    {activeInput === "pickup" && (pickupSuggestions.length > 0 || isLoadingSuggestions || suggestionsError) && (
+                      <div className="absolute top-full left-0 right-0 mt-2.5 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-zinc-100 max-h-64 overflow-y-auto animate-fade-in">
+                        {isLoadingSuggestions ? (
+                          <div className="px-4 py-3 flex items-center space-x-2.5 text-xs text-zinc-450 font-semibold font-mono animate-pulse">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-550 shrink-0" />
+                            <span>Searching locations...</span>
+                          </div>
+                        ) : (
+                          <>
+                            {suggestionsError && (
+                              <div className="px-4 py-2 bg-red-50 text-[11px] text-red-600 font-semibold flex items-center space-x-1.5 border-b border-zinc-100">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                <span>{suggestionsError}</span>
+                              </div>
+                            )}
+                            {pickupSuggestions.map((s) => (
+                              <div
+                                key={s.id}
+                                onClick={() => {
+                                  setPValue(s.place_name);
+                                  setPCoords(s.coordinates);
+                                  setPickupSuggestions([]);
+                                  setActiveInput(null);
+                                  setSuggestionsError(null);
+                                  if (dCoords) {
+                                    calculateRoute(s.coordinates, dCoords);
+                                  }
+                                }}
+                                className="px-4 py-2.5 hover:bg-zinc-50 cursor-pointer transition-colors flex items-start space-x-2.5"
+                              >
+                                <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-bold text-zinc-800 truncate">{s.title || s.place_name}</span>
+                                  {s.secondary && (
+                                    <span className="text-[10px] text-zinc-400 mt-0.5 truncate">{s.secondary}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Pickup Autocomplete Dropdown List */}
-                  {activeInput === "pickup" && (pickupSuggestions.length > 0 || isLoadingSuggestions || suggestionsError) && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-zinc-100 max-h-64 overflow-y-auto animate-fade-in">
-                      {isLoadingSuggestions ? (
-                        <div className="px-4 py-3.5 flex items-center space-x-2.5 text-xs text-zinc-450 font-semibold font-mono animate-pulse">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-550 shrink-0" />
-                          <span>Searching locations...</span>
-                        </div>
-                      ) : (
-                        <>
-                          {suggestionsError && (
-                            <div className="px-4 py-2.5 bg-red-50 text-[11px] text-red-600 font-semibold flex items-center space-x-1.5 border-b border-zinc-100">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                              <span>{suggestionsError}</span>
-                            </div>
-                          )}
-                          {pickupSuggestions.map((s) => (
-                            <div
-                              key={s.id}
-                              onClick={() => {
-                                setPValue(s.place_name);
-                                setPCoords(s.coordinates);
-                                setPickupSuggestions([]);
-                                setActiveInput(null);
-                                setSuggestionsError(null);
-                                if (dCoords) {
-                                  calculateRoute(s.coordinates, dCoords);
-                                }
-                              }}
-                              className="px-4 py-2.5 hover:bg-zinc-50 cursor-pointer transition-colors flex items-start space-x-2.5"
-                            >
-                              <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-bold text-zinc-800 truncate">{s.title || s.place_name}</span>
-                                {s.secondary && (
-                                  <span className="text-[10px] text-zinc-400 mt-0.5 truncate">{s.secondary}</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Dropoff Field */}
-                <div ref={destinationInputRef} className="relative">
-                  <div className="flex items-center space-x-3 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus-within:border-zinc-400 focus-within:bg-white transition-colors duration-150">
-                    <div className="p-1 bg-white border border-zinc-200 rounded-md text-zinc-500">
-                      <Navigation className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1">
+                  {/* Dropoff Field */}
+                  <div ref={destinationInputRef} className="relative py-2.5 flex items-center min-w-0">
+                    <div className="flex-1 min-w-0">
                       <input
                         name="destination"
                         type="text"
@@ -796,8 +790,6 @@ export default function RideBookingCard({
                         onChange={(e) => {
                           setDValue(e.target.value);
                           setActiveInput("destination");
-                          
-                          // Debounce geocoder requests to respect Nominatim limits
                           if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
                           debounceTimeoutRef.current = setTimeout(() => {
                             fetchSuggestions(e.target.value, "destination");
@@ -809,7 +801,7 @@ export default function RideBookingCard({
                         }}
                         required
                         autoComplete="off"
-                        className="w-full bg-transparent border-0 outline-0 p-0 text-sm text-zinc-900 placeholder-zinc-455 focus:ring-0 font-medium"
+                        className="w-full bg-transparent border-0 outline-0 p-0 text-sm text-zinc-900 placeholder-zinc-450 focus:ring-0 font-medium"
                       />
                     </div>
                     {dValue && (
@@ -821,57 +813,57 @@ export default function RideBookingCard({
                           setDistMiles(null);
                           setRGeom(null);
                         }}
-                        className="text-zinc-400 hover:text-black text-xs font-semibold cursor-pointer"
+                        className="text-zinc-400 hover:text-black text-xs font-semibold cursor-pointer pr-1"
                       >
                         Clear
                       </button>
                     )}
-                  </div>
 
-                  {/* Destination Autocomplete Dropdown List */}
-                  {activeInput === "destination" && (destinationSuggestions.length > 0 || isLoadingSuggestions || suggestionsError) && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-zinc-100 max-h-64 overflow-y-auto animate-fade-in">
-                      {isLoadingSuggestions ? (
-                        <div className="px-4 py-3.5 flex items-center space-x-2.5 text-xs text-zinc-450 font-semibold font-mono animate-pulse">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-550 shrink-0" />
-                          <span>Searching locations...</span>
-                        </div>
-                      ) : (
-                        <>
-                          {suggestionsError && (
-                            <div className="px-4 py-2.5 bg-red-50 text-[11px] text-red-600 font-semibold flex items-center space-x-1.5 border-b border-zinc-100">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                              <span>{suggestionsError}</span>
-                            </div>
-                          )}
-                          {destinationSuggestions.map((s) => (
-                            <div
-                              key={s.id}
-                              onClick={() => {
-                                setDValue(s.place_name);
-                                setDCoords(s.coordinates);
-                                setDestinationSuggestions([]);
-                                setActiveInput(null);
-                                setSuggestionsError(null);
-                                if (pCoords) {
-                                  calculateRoute(pCoords, s.coordinates);
-                                }
-                              }}
-                              className="px-4 py-2.5 hover:bg-zinc-50 cursor-pointer transition-colors flex items-start space-x-2.5"
-                            >
-                              <Navigation className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-bold text-zinc-800 truncate">{s.title || s.place_name}</span>
-                                {s.secondary && (
-                                  <span className="text-[10px] text-zinc-400 mt-0.5 truncate">{s.secondary}</span>
-                                )}
+                    {/* Autocomplete Dropdown List */}
+                    {activeInput === "destination" && (destinationSuggestions.length > 0 || isLoadingSuggestions || suggestionsError) && (
+                      <div className="absolute top-full left-0 right-0 mt-2.5 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-zinc-100 max-h-64 overflow-y-auto animate-fade-in">
+                        {isLoadingSuggestions ? (
+                          <div className="px-4 py-3 flex items-center space-x-2.5 text-xs text-zinc-450 font-semibold font-mono animate-pulse">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-550 shrink-0" />
+                            <span>Searching locations...</span>
+                          </div>
+                        ) : (
+                          <>
+                            {suggestionsError && (
+                              <div className="px-4 py-2 bg-red-50 text-[11px] text-red-600 font-semibold flex items-center space-x-1.5 border-b border-zinc-100">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                <span>{suggestionsError}</span>
                               </div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
+                            )}
+                            {destinationSuggestions.map((s) => (
+                              <div
+                                key={s.id}
+                                onClick={() => {
+                                  setDValue(s.place_name);
+                                  setDCoords(s.coordinates);
+                                  setDestinationSuggestions([]);
+                                  setActiveInput(null);
+                                  setSuggestionsError(null);
+                                  if (pCoords) {
+                                    calculateRoute(pCoords, s.coordinates);
+                                  }
+                                }}
+                                className="px-4 py-2.5 hover:bg-zinc-50 cursor-pointer transition-colors flex items-start space-x-2.5"
+                              >
+                                <Navigation className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-bold text-zinc-800 truncate">{s.title || s.place_name}</span>
+                                  {s.secondary && (
+                                    <span className="text-[10px] text-zinc-400 mt-0.5 truncate">{s.secondary}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1022,45 +1014,42 @@ export default function RideBookingCard({
                 </div>
               </div>
             )}
-
             {/* Ride Type Selector */}
             <div className="space-y-2 pt-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
                 Select Ride Tier
               </label>
-              <div className="flex flex-col space-y-2">
+              <div className="border border-zinc-200 rounded-xl divide-y divide-zinc-200 overflow-hidden bg-white shadow-3xs">
                 <input type="hidden" name="rideType" value={selectedRide} />
                 {rideTypes.map((type) => (
                   <div
                     key={type.id}
                     onClick={() => setSelectedRide(type.id)}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    className={`flex items-center justify-between p-4 transition-all cursor-pointer ${
                       selectedRide === type.id
-                        ? "bg-zinc-50 border-black shadow-2xs"
-                        : "bg-white border-zinc-200 hover:border-zinc-300"
+                        ? "bg-zinc-50/80"
+                        : "bg-white hover:bg-zinc-50/50"
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-                          selectedRide === type.id ? "border-black bg-black" : "border-zinc-300 bg-white"
-                        }`}
-                      >
-                        {selectedRide === type.id && <Check className="w-2.5 h-2.5 text-white stroke-[3.5px]" />}
+                    <div className="flex items-center space-x-3.5">
+                      <div className="shrink-0 text-zinc-900">
+                        <Car className="w-5 h-5 stroke-[1.5]" />
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-[14px] font-bold text-zinc-900 tracking-tight">{type.name}</span>
+                          <span className="text-sm font-bold text-zinc-950 tracking-tight">{type.name}</span>
                           {isRecommended(type.id) && (
-                            <span className="text-[8px] font-mono tracking-tight font-extrabold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-250/60 uppercase">
+                            <span className="text-[8px] font-mono tracking-tight font-extrabold px-1.5 py-0.5 rounded bg-zinc-900 text-white uppercase">
                               Recommended
                             </span>
                           )}
                         </div>
+                        <p className="text-xs text-zinc-500 mt-0.5">{type.description}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[14px] font-black text-zinc-900">₹{getFare(type.id)}</span>
+                    <div className="text-right flex flex-col items-end shrink-0">
+                      <span className="text-sm font-black text-zinc-950">₹{getFare(type.id)}</span>
+                      <span className="text-[10px] text-zinc-400 font-mono mt-0.5">{type.eta} away</span>
                     </div>
                   </div>
                 ))}
@@ -1068,20 +1057,20 @@ export default function RideBookingCard({
             </div>
 
             {/* Promo Code Slot */}
-            <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-2 mt-2">
-              <label className="text-[10px] font-bold text-zinc-455 uppercase tracking-widest block">
+            <div className="pt-2 space-y-2">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
                 Promo Coupon
               </label>
               <div className="flex space-x-2">
                 <input
                   type="text"
-                  placeholder="ENTER PROMO CODE"
+                  placeholder="Enter promo code"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                   onFocus={() => setIsPromoFocused(true)}
                   onBlur={() => setIsPromoFocused(false)}
                   disabled={!!appliedPromo}
-                  className="flex-1 bg-white border border-zinc-200 rounded-lg px-3 py-2 text-xs font-bold text-zinc-800 placeholder-zinc-400 outline-none focus:border-zinc-400 transition-all font-mono"
+                  className="flex-1 bg-white border border-zinc-200 rounded-lg px-3 py-2 text-xs font-medium text-zinc-900 placeholder-zinc-400 outline-none focus:border-black transition-all"
                 />
                 {appliedPromo ? (
                   <button
@@ -1090,7 +1079,7 @@ export default function RideBookingCard({
                       setAppliedPromo(null);
                       setPromoCode("");
                     }}
-                    className="px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors"
+                    className="px-3 py-2 text-xs font-bold text-red-650 hover:text-red-700 transition-colors"
                   >
                     Remove
                   </button>
@@ -1099,15 +1088,15 @@ export default function RideBookingCard({
                     type="button"
                     onClick={handleApplyPromo}
                     disabled={isValidatingPromo || !promoCode.trim()}
-                    className="px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-850 disabled:bg-zinc-100 disabled:text-zinc-400 transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 transition-colors cursor-pointer"
                   >
                     {isValidatingPromo ? "Applying..." : "Apply"}
                   </button>
                 )}
               </div>
-              {promoError && <p className="text-[10px] text-red-500 font-bold">{promoError}</p>}
+              {promoError && <p className="text-[10px] text-red-500 font-semibold">{promoError}</p>}
               {appliedPromo && (
-                <p className="text-[11px] text-emerald-600 font-bold flex items-center space-x-1">
+                <p className="text-[11px] text-emerald-600 font-semibold flex items-center space-x-1">
                   <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3px]" />
                   <span>Coupon &quot;{appliedPromo.code}&quot; applied! You saved ₹{appliedPromo.discount}.</span>
                 </p>

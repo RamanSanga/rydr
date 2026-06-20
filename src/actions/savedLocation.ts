@@ -47,3 +47,27 @@ export async function deleteSavedLocation(id: string) {
   revalidatePath("/rider");
   return { success: true };
 }
+
+export async function seedSavedLocationsAction(locations: { label: string; address: string; lat: number; lon: number }[]) {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("Unauthorized: Please sign in first.");
+  }
+
+  const created = await prisma.$transaction(
+    locations.map((loc) =>
+      prisma.savedLocation.create({
+        data: {
+          label: loc.label,
+          address: loc.address,
+          lat: loc.lat,
+          lon: loc.lon,
+          userId,
+        },
+      })
+    )
+  );
+
+  revalidatePath("/rider");
+  return { success: true, locations: created };
+}

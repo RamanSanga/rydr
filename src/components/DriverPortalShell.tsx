@@ -24,9 +24,7 @@ import {
   type DriverRideStatus,
 } from "@/lib/driver-portal";
 import {
-  fetchAvailableRideRequests,
-  fetchDriverActiveRides,
-  fetchDriverCompletedRides,
+  fetchDriverDashboardDataAction,
   fetchDriverStats,
   acceptRideAction,
   rejectRideAction,
@@ -136,33 +134,33 @@ const driverGreetings = [
 
 function SubNavigation({ activeView }: { activeView: DriverPortalView }) {
   return (
-    <div className="flex items-center space-x-1.5 p-1 bg-zinc-900/5 rounded-full self-start">
+    <div className="flex items-center p-1 bg-zinc-100 rounded-lg border border-zinc-200/60 self-start">
       <Link
         href="/driver"
-        className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 ${
+        className={`px-3.5 py-1.5 rounded-md text-[12px] font-bold transition-all duration-150 ${
           activeView === "overview"
-            ? "bg-white text-zinc-950 shadow-xs"
-            : "text-zinc-550 hover:text-zinc-950"
+            ? "bg-white text-black shadow-3xs"
+            : "text-zinc-500 hover:text-black"
         }`}
       >
         Console
       </Link>
       <Link
         href="/driver/rides"
-        className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 ${
+        className={`px-3.5 py-1.5 rounded-md text-[12px] font-bold transition-all duration-150 ${
           activeView === "rides"
-            ? "bg-white text-zinc-950 shadow-xs"
-            : "text-zinc-550 hover:text-zinc-950"
+            ? "bg-white text-black shadow-3xs"
+            : "text-zinc-500 hover:text-black"
         }`}
       >
         Dispatches
       </Link>
       <Link
         href="/driver/earnings"
-        className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-200 ${
+        className={`px-3.5 py-1.5 rounded-md text-[12px] font-bold transition-all duration-150 ${
           activeView === "earnings"
-            ? "bg-white text-zinc-950 shadow-xs"
-            : "text-zinc-550 hover:text-zinc-950"
+            ? "bg-white text-black shadow-3xs"
+            : "text-zinc-500 hover:text-black"
         }`}
       >
         Earnings
@@ -274,13 +272,13 @@ function RideTile({
   }, [id, onAccept, onDecline]);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.015)] hover:border-zinc-400 transition-all duration-200">
-      <div className="flex items-center justify-between mb-4.5">
-        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${tierStyles[tier]}`}>
+    <div className="rounded-lg border border-zinc-200 bg-white p-4.5 hover:border-zinc-400 transition-all duration-200 shadow-3xs">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-900 border border-zinc-200 px-2 py-0.5 rounded">
           {tier}
         </span>
         {status && (
-          <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider ${statusStyles[status]}`}>
+          <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-605 bg-zinc-100 px-2 py-0.5 rounded">
             {status}
           </span>
         )}
@@ -288,40 +286,40 @@ function RideTile({
       
       <div className="space-y-3.5">
         <div>
-          <p className="text-[10px] font-mono font-semibold text-zinc-400 uppercase tracking-widest leading-none">Passenger</p>
-          <p className="text-[13.5px] font-bold text-zinc-950 mt-1">{rider}</p>
+          <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest leading-none">Passenger</p>
+          <p className="text-sm font-bold text-zinc-950 mt-1">{rider}</p>
         </div>
         
         <div>
-          <p className="text-[10px] font-mono font-semibold text-zinc-400 uppercase tracking-widest leading-none">Trip Route</p>
-          <div className="flex items-start gap-2 mt-1.5">
-            <div className="flex flex-col items-center mt-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-zinc-950" />
-              <div className="w-[1.5px] h-4 bg-zinc-200" />
-              <div className="w-1.5 h-1.5 rounded-full border border-zinc-950 bg-white" />
+          <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest leading-none">Trip Route</p>
+          <div className="flex items-start gap-2.5 mt-1.5">
+            <div className="flex flex-col items-center mt-1 shrink-0">
+              <div className="w-1.5 h-1.5 rounded-full bg-black" />
+              <div className="w-[1.5px] h-4 bg-zinc-200 my-0.5" />
+              <div className="w-1.5 h-1.5 border border-black bg-white" />
             </div>
-            <div className="text-[13px] text-zinc-800 leading-snug font-semibold">
-              <p className="text-zinc-950">{route}</p>
-              <p className="text-zinc-450 text-[11.5px] font-normal mt-0.5">{meta}</p>
+            <div className="text-[13px] text-zinc-800 leading-snug font-semibold min-w-0">
+              <p className="text-zinc-950 truncate">{route}</p>
+              <p className="text-zinc-400 text-[11px] font-normal mt-0.5 truncate">{meta}</p>
             </div>
           </div>
         </div>
       </div>
 
       {onAccept && onDecline && (
-        <div className="mt-3.5 bg-amber-50 border border-amber-250 rounded-xl p-3 flex items-center justify-between shadow-3xs animate-pulse">
+        <div className="mt-3.5 bg-black text-white rounded-lg p-3 flex items-center justify-between animate-pulse">
           <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
-            <span className="text-[11px] font-bold text-amber-800">Incoming dispatch offer</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="text-[11px] font-bold tracking-tight">Incoming dispatch offer</span>
           </div>
-          <span className="bg-amber-600 text-white font-mono font-black text-xs px-2.5 py-0.5 rounded shadow-2xs">
-            {secondsLeft}s remaining
+          <span className="bg-zinc-800 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded">
+            {secondsLeft}s left
           </span>
         </div>
       )}
       
-      <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-4.5">
-        <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase">Payout</span>
+      <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-4">
+        <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase">Payout</span>
         <span className="text-lg font-black text-zinc-950">{amount}</span>
       </div>
 
@@ -332,7 +330,7 @@ function RideTile({
             <button
               onClick={() => onDecline(id)}
               disabled={isSubmitting}
-              className="flex-1 min-h-[48px] py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+              className="flex-1 min-h-[44px] py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-lg transition-all cursor-pointer active:scale-98 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center border border-zinc-200"
             >
               {isSubmitting && submittingAction === "decline" ? (
                 <Loader2 className="w-4 h-4 animate-spin text-zinc-700" />
@@ -345,14 +343,14 @@ function RideTile({
             <button
               onClick={() => onAccept(id)}
               disabled={isSubmitting}
-              className="flex-1 min-h-[48px] py-2.5 bg-zinc-955 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+              className="flex-grow-[2] min-h-[44px] py-2 bg-black hover:bg-zinc-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer active:scale-98 shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
             >
               {isSubmitting && submittingAction === "accept" ? (
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
               ) : (
                 <>
                   <span>Accept Trip</span>
-                  <span className="bg-white/20 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+                  <span className="bg-zinc-700 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
                     {secondsLeft}s
                   </span>
                 </>
@@ -369,7 +367,7 @@ function RideTile({
             <button
               onClick={() => onUpdateStatus(id, "Driver Arriving")}
               disabled={isSubmitting}
-              className="w-full min-h-[48px] py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+              className="w-full min-h-[44px] py-2 bg-black hover:bg-zinc-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer active:scale-98 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
             >
               {isSubmitting && submittingAction === "Driver Arriving" ? (
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -382,7 +380,7 @@ function RideTile({
             <button
               onClick={() => onUpdateStatus(id, "On Trip")}
               disabled={isSubmitting}
-              className="w-full min-h-[48px] py-2.5 bg-zinc-950 hover:bg-zinc-850 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+              className="w-full min-h-[44px] py-2 bg-black hover:bg-zinc-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer active:scale-98 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
             >
               {isSubmitting && submittingAction === "On Trip" ? (
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -395,7 +393,7 @@ function RideTile({
             <button
               onClick={() => onComplete(id)}
               disabled={isSubmitting}
-              className="w-full min-h-[48px] py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full transition-all cursor-pointer active:scale-97 flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full min-h-[44px] py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-all cursor-pointer active:scale-98 flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
             >
               {isSubmitting && submittingAction === "complete" ? (
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -451,16 +449,8 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
         return;
       }
 
-      const promises: Promise<any>[] = [
-        fetchAvailableRideRequests(),
-        fetchDriverActiveRides(),
-      ];
-
-      if (view === "rides") {
-        promises.push(fetchDriverCompletedRides());
-      }
-
-      const [dbRequests, dbActive, dbCompleted] = await Promise.all(promises);
+      const { requests: dbRequests, active: dbActive, completed: dbCompleted } = 
+        await fetchDriverDashboardDataAction(view === "rides");
 
       const formattedRequests = dbRequests.map((r: any) => {
         const dist = getRouteDistance(r.pickup, r.destination);
@@ -646,7 +636,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
           
           {/* Rides panel */}
           {view === "rides" && (
-            <div className="w-full md:w-[450px] max-h-full overflow-y-auto bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl p-5 shadow-xl pointer-events-auto space-y-5 flex flex-col">
+            <div className="w-full md:w-[450px] max-h-full overflow-y-auto bg-white border border-zinc-200 rounded-xl p-5 shadow-md pointer-events-auto space-y-5 flex flex-col">
               <div className="pb-3 border-b border-zinc-100 flex items-center justify-between shrink-0">
                 <h3 className="text-xs font-black text-zinc-950 uppercase tracking-widest font-mono">Dispatches</h3>
                 <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded-full font-bold text-zinc-600">
@@ -753,7 +743,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
 
           {/* Earnings panel */}
           {view === "earnings" && (
-            <div className="w-full md:w-[450px] max-h-full overflow-y-auto bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl p-5 shadow-xl pointer-events-auto space-y-5">
+            <div className="w-full md:w-[450px] max-h-full overflow-y-auto bg-white border border-zinc-200 rounded-xl p-5 shadow-md pointer-events-auto space-y-5">
               <div className="pb-3 border-b border-zinc-100 flex items-center justify-between shrink-0">
                 <h3 className="text-xs font-black text-zinc-950 uppercase tracking-widest font-mono">Earnings</h3>
                 <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full font-bold">
@@ -762,11 +752,11 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
               </div>
 
               <div className="space-y-4">
-                <div className="bg-zinc-950 text-white rounded-2xl p-4 shadow-md flex flex-col space-y-3">
+                <div className="bg-black text-white rounded-lg p-4.5 shadow-sm flex flex-col space-y-3">
                   <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase">TODAY&apos;S EARNINGS</span>
                   <div className="flex items-end justify-between">
                     <span className="text-2xl font-black tracking-tight text-white">{stats.todayEarnings}</span>
-                    <button className="px-3.5 py-1.5 bg-white text-black hover:bg-zinc-100 rounded-full font-bold text-[10.5px] active:scale-97 transition-all shadow-xs shrink-0 cursor-pointer">
+                    <button className="px-3.5 py-1.5 bg-white text-black hover:bg-zinc-100 rounded-lg font-bold text-[10.5px] active:scale-97 transition-all shadow-xs shrink-0 cursor-pointer">
                       Cashout
                     </button>
                   </div>
@@ -807,11 +797,10 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
           {/* Overview floating cards — pinned to bottom-left */}
           {view === "overview" && (
             <div className="absolute bottom-0 left-0 max-w-sm w-full space-y-3 pointer-events-none">
-              
               {requests.length > 0 && availability === "Online" && (
-                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border-2 border-emerald-500 shadow-2xl pointer-events-auto space-y-4">
+                <div className="bg-white rounded-xl p-5 border border-zinc-200 shadow-lg pointer-events-auto space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-mono font-bold bg-zinc-950 text-white px-2 py-0.5 rounded">
                       NEW REQUEST NEARBY
                     </span>
                     <span className="text-xs font-black text-zinc-950">{requests[0].distance}</span>
@@ -828,7 +817,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                     <button
                       onClick={() => handleDeclineRequest(requests[0].id)}
                       disabled={!!submittingId}
-                      className="flex-1 py-3 min-h-[44px] bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+                      className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center border border-zinc-200"
                     >
                       {submittingId === requests[0].id && submittingAction === "decline" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -839,7 +828,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                     <button
                       onClick={() => handleAcceptRequest(requests[0].id)}
                       disabled={!!submittingId}
-                      className="flex-1 py-3 min-h-[44px] bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+                      className="flex-[2] py-2.5 bg-black hover:bg-zinc-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                     >
                       {submittingId === requests[0].id && submittingAction === "accept" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -852,12 +841,12 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
               )}
 
               {accepted.length > 0 && (
-                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border border-zinc-200 shadow-2xl pointer-events-auto space-y-4">
+                <div className="bg-white rounded-xl p-5 border border-zinc-200 shadow-lg pointer-events-auto space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded uppercase">
+                    <span className="text-[10px] font-mono font-bold bg-zinc-105 text-zinc-805 border border-zinc-200 px-2 py-0.5 rounded uppercase">
                       Active Dispatch
                     </span>
-                    <span className="text-xs font-black text-zinc-950">{accepted[0].eta}</span>
+                    <span className="text-xs font-black text-zinc-955">{accepted[0].eta}</span>
                   </div>
                   <div>
                     <p className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest">Trip Route</p>
@@ -870,7 +859,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       <button
                         onClick={() => handleUpdateRideStatus(accepted[0].id, "Driver Arriving")}
                         disabled={!!submittingId}
-                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+                        className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                       >
                         {submittingId === accepted[0].id ? <Loader2 className="w-4 h-4 animate-spin" /> : "I've Arrived"}
                       </button>
@@ -879,7 +868,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       <button
                         onClick={() => handleUpdateRideStatus(accepted[0].id, "On Trip")}
                         disabled={!!submittingId}
-                        className="w-full py-3 min-h-[44px] bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
+                        className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center"
                       >
                         {submittingId === accepted[0].id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Trip"}
                       </button>
@@ -888,7 +877,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       <button
                         onClick={() => handleCompleteRide(accepted[0].id)}
                         disabled={!!submittingId}
-                        className="w-full py-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
                       >
                         {submittingId === accepted[0].id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -905,7 +894,7 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
               )}
 
               {requests.length === 0 && accepted.length === 0 && (
-                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 border border-zinc-200/60 shadow-lg pointer-events-auto flex items-center justify-between">
+                <div className="bg-white rounded-xl p-4 border border-zinc-200 shadow-md pointer-events-auto flex items-center justify-between">
                   <div className="space-y-0.5">
                     <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Shift Stats</span>
                     <div className="flex items-center space-x-3 mt-0.5 text-xs text-zinc-600 font-bold">
@@ -916,12 +905,11 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
                       <span>Rating: <strong className="text-zinc-950 font-black">{stats.driverRating}</strong></span>
                     </div>
                   </div>
-                  <div className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center text-zinc-800">
+                  <div className="w-9 h-9 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-center text-zinc-800">
                     <Coins className="w-4 h-4" />
                   </div>
                 </div>
               )}
-
             </div>
           )}
 
@@ -932,17 +920,17 @@ export default function DriverPortalShell({ view }: { view: DriverPortalView }) 
           {availability === "Offline" ? (
             <button
               onClick={() => setAvailability("Online")}
-              className="h-14 w-full bg-emerald-500 hover:bg-emerald-600 active:scale-97 text-white font-black text-base tracking-wider rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2.5 cursor-pointer"
+              className="h-12 w-full bg-black hover:bg-zinc-800 active:scale-98 text-white font-bold text-sm tracking-wider rounded-lg transition-all flex items-center justify-center space-x-2 cursor-pointer shadow-sm"
             >
-              <Circle className="w-4 h-4 fill-white stroke-[2.5px]" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>GO ONLINE</span>
             </button>
           ) : (
             <button
               onClick={() => setAvailability("Offline")}
-              className="h-14 w-full bg-zinc-950 hover:bg-zinc-800 active:scale-97 text-white font-black text-sm tracking-wider rounded-2xl transition-all shadow-md flex items-center justify-center space-x-2.5 cursor-pointer"
+              className="h-12 w-full bg-zinc-100 hover:bg-zinc-200 active:scale-98 text-zinc-900 font-bold text-sm tracking-wider rounded-lg transition-all flex items-center justify-center space-x-2 cursor-pointer border border-zinc-200"
             >
-              <CircleDot className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+              <span className="w-2 h-2 rounded-full bg-zinc-400" />
               <span>GO OFFLINE</span>
             </button>
           )}

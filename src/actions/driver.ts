@@ -5,8 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { calculateFare, getRouteDistance } from "@/lib/data";
 
+let availableRequestsSeeded = false;
+
 // Seed active requests in DB to ensure the dashboard is prefilled with realistic Indian ride offers
 export async function seedAvailableRequests() {
+  if (availableRequestsSeeded) return;
+
   const count = await prisma.ride.count({
     where: {
       status: "Requested",
@@ -14,6 +18,7 @@ export async function seedAvailableRequests() {
     },
   });
 
+  availableRequestsSeeded = true;
   if (count > 0) return;
 
   // Find any rider in the database, or create a mock rider
@@ -498,4 +503,71 @@ export async function getNearbyDrivers(lat: number, lng: number) {
       error: error.message || "Unknown server error occurred"
     };
   }
+}
+
+export async function fetchDriverDashboardDataAction(includeCompleted: boolean) {
+  const { userId } = await auth();
+  if (!userId) {
+    return { requests: [], active: [], completed: [] };
+  }
+
+  // Seed requests to guarantee active operational queue on first load
+  await seedAvailableRequests();
+
+  const requestsPromise = prisma.ride.findMany({
+    where: {
+      status: "Requested",
+      driverId: userId,
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  const activePromise = prisma.ride.findMany({
+    where: {
+      driverId: userId,
+      status: {
+        in: ["Accepted", "Driver Arriving", "On Trip"],
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  const completedPromise = includeCompleted
+    ? prisma.ride.findMany({
+        where: {
+          driverId: userId,
+          status: "Completed",
+        },
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      })
+    : Promise.resolve([]);
+
+  const [requests, active, completed] = await Promise.all([
+    requestsPromise,
+    activePromise,
+    completedPromise,
+  ]);
+
+  return { requests, active, completed };
 }

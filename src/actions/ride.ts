@@ -5,10 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getNearbyDrivers } from "./driver";
 
+const seededUsers = new Set<string>();
+
 export async function seedUserRides(userId: string) {
+  if (seededUsers.has(userId)) return;
+
   const count = await prisma.ride.count({
     where: { userId },
   });
+
+  seededUsers.add(userId);
   if (count > 0) return;
 
   // Ensure the User record exists in the database to satisfy the foreign key constraint

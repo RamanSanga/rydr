@@ -57,7 +57,7 @@ export default function Herobar() {
   } as const;
 
   return (
-    <section id="ride" className="relative min-h-screen pt-32 pb-24 flex items-center justify-center overflow-hidden bg-white">
+    <section id="ride" className="relative min-h-screen pt-20 pb-12 lg:pt-32 lg:pb-24 flex items-center justify-center overflow-hidden bg-white">
       
       {/* Calm, soft light shadows */}
       <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-blue-500/[0.01] rounded-full blur-3xl pointer-events-none" />
@@ -74,9 +74,8 @@ export default function Herobar() {
           <div className="lg:col-span-5 flex flex-col space-y-7">
             <motion.div variants={itemVariants} className="space-y-4">
               {/* Warm tag line */}
-              <div className="inline-flex items-center space-x-2 bg-zinc-50 border border-zinc-200 px-3 py-1 rounded-full text-zinc-650 text-xs font-bold tracking-wider shadow-3xs">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                <span>Your ride is already waiting.</span>
+              <div className="text-[11px] font-mono font-bold tracking-[0.2em] text-zinc-400 uppercase">
+                Your ride is already waiting
               </div>
 
               <h1 className="text-4xl md:text-5xl xl:text-[52px] font-black tracking-tight text-[#111111] leading-[1.08]">
@@ -89,27 +88,8 @@ export default function Herobar() {
               </p>
             </motion.div>
 
-            {/* Ride Booking Card (Visual Hero of the section) with Floating Stories */}
+            {/* Ride Booking Card (Visual Hero of the section) */}
             <motion.div variants={itemVariants} className="w-full animate-fade-in relative">
-              {/* Floating stickers representing travel moments */}
-              <div className="absolute -top-4 -left-3 md:-top-6 md:-left-6 z-20 animate-float-slow select-none pointer-events-auto hover:scale-105 transition-transform duration-200">
-                <span className="inline-flex items-center space-x-1 bg-[#EFF6FF] border border-blue-200/80 px-2.5 py-1.5 rounded-full text-[#1D4ED8] text-[10px] md:text-xs font-extrabold tracking-tight shadow-3xs cursor-pointer">
-                  <span>Airport tomorrow? ✈️</span>
-                </span>
-              </div>
-
-              <div className="absolute -bottom-5 -right-2 md:-bottom-7 md:-right-4 z-20 animate-float-delayed select-none pointer-events-auto hover:scale-105 transition-transform duration-200">
-                <span className="inline-flex items-center space-x-1 bg-[#FFFBEB] border border-amber-250/80 px-2.5 py-1.5 rounded-full text-[#B45309] text-[10px] md:text-xs font-extrabold tracking-tight shadow-3xs cursor-pointer">
-                  <span>Late night chai? ☕</span>
-                </span>
-              </div>
-
-              <div className="absolute top-1/2 -right-4 md:-right-10 z-20 animate-float-slow select-none pointer-events-auto hover:scale-105 transition-transform duration-200 hidden sm:block">
-                <span className="inline-flex items-center space-x-1 bg-[#F0FDFA] border border-teal-200/80 px-2.5 py-1.5 rounded-full text-[#0F766E] text-[10px] md:text-xs font-extrabold tracking-tight shadow-3xs cursor-pointer">
-                  <span>Rain outside? ☔</span>
-                </span>
-              </div>
-
               <RideBookingCard />
             </motion.div>
 
@@ -121,7 +101,7 @@ export default function Herobar() {
               {/* Upfront pricing */}
               <div className="space-y-1">
                 <div className="flex items-center space-x-1 text-zinc-500">
-                  <IndianRupee className="w-3.5 h-3.5 text-zinc-600" />
+                  <IndianRupee className="w-3.5 h-3.5 text-zinc-655" />
                   <span className="text-[10px] font-bold tracking-wider uppercase font-sans">Guaranteed Fares</span>
                 </div>
                 <p className="text-[11px] text-zinc-450 leading-normal font-semibold">
@@ -132,7 +112,7 @@ export default function Herobar() {
               {/* Vetted drivers */}
               <div className="space-y-1">
                 <div className="flex items-center space-x-1 text-zinc-500">
-                  <Shield className="w-3.5 h-3.5 text-zinc-600" />
+                  <Shield className="w-3.5 h-3.5 text-zinc-655" />
                   <span className="text-[10px] font-bold tracking-wider uppercase font-sans">Friendly Drivers</span>
                 </div>
                 <p className="text-[11px] text-zinc-450 leading-normal font-semibold">
@@ -143,7 +123,7 @@ export default function Herobar() {
               {/* Quick dispatch */}
               <div className="space-y-1">
                 <div className="flex items-center space-x-1 text-zinc-500">
-                  <Clock className="w-3.5 h-3.5 text-zinc-600" />
+                  <Clock className="w-3.5 h-3.5 text-zinc-655" />
                   <span className="text-[10px] font-bold tracking-wider uppercase font-sans">Cozy Cabins</span>
                 </div>
                 <p className="text-[11px] text-zinc-450 leading-normal font-semibold">
@@ -154,40 +134,25 @@ export default function Herobar() {
           </div>
 
           {/* Right Column: Interactive Cinematic Journey Window */}
-          <motion.div variants={itemVariants} className="lg:col-span-7 w-full flex flex-col justify-center">
-            <div className="w-full bg-[#111111] border border-zinc-900 rounded-3xl p-5 md:p-7 shadow-2xl relative flex flex-col space-y-6 overflow-hidden">
+          <motion.div variants={itemVariants} className="hidden lg:flex lg:col-span-7 w-full flex flex-col justify-center">
+            <div className="w-full bg-white border border-zinc-200 rounded-xl p-3 shadow-xs relative flex flex-col space-y-4 overflow-hidden">
               
               {/* Slideshow Image Showcase Container */}
-              <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-xl flex items-center justify-center bg-black group">
+              <div className="relative aspect-[4/3] w-full rounded-lg overflow-hidden border border-zinc-200 flex items-center justify-center bg-zinc-50 group">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeSlide}
                     initial={{ opacity: 0, scale: 1.01 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.99 }}
-                    transition={{ duration: 0.6, ease: "easeInOut" }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
                     className="absolute inset-0"
                   >
                     <img
                       src={slides[activeSlide].src}
                       alt={slides[activeSlide].title}
-                      className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-103"
+                      className="w-full h-full object-cover opacity-95 transition-transform duration-700 group-hover:scale-101"
                     />
-                    {/* Cinematic bottom overlay lighting gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
-                    
-                    {/* Live overlay text directly inside the image */}
-                    <div className="absolute bottom-5 inset-x-5 flex flex-col space-y-1.5 text-left text-white drop-shadow-md">
-                      <span className="text-[10px] font-mono font-black tracking-widest text-amber-500 uppercase">
-                        {slides[activeSlide].tagline}
-                      </span>
-                      <h4 className="text-lg font-black tracking-tight leading-none">
-                        {slides[activeSlide].title}
-                      </h4>
-                      <p className="text-[12.5px] text-zinc-300 leading-normal max-w-md font-medium">
-                        {slides[activeSlide].copy}
-                      </p>
-                    </div>
                   </motion.div>
                 </AnimatePresence>
 
@@ -198,7 +163,7 @@ export default function Herobar() {
                       e.stopPropagation();
                       setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length);
                     }}
-                    className="p-2.5 rounded-full bg-black/60 hover:bg-black text-white border border-zinc-800 pointer-events-auto cursor-pointer active:scale-95 transition-all shadow-md"
+                    className="p-2.5 rounded-full bg-white/90 hover:bg-white text-black border border-zinc-200 pointer-events-auto cursor-pointer active:scale-95 transition-all shadow-sm"
                   >
                     <svg className="w-4 h-4 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -209,7 +174,7 @@ export default function Herobar() {
                       e.stopPropagation();
                       setActiveSlide((prev) => (prev + 1) % slides.length);
                     }}
-                    className="p-2.5 rounded-full bg-black/60 hover:bg-black text-white border border-zinc-800 pointer-events-auto cursor-pointer active:scale-95 transition-all shadow-md"
+                    className="p-2.5 rounded-full bg-white/90 hover:bg-white text-black border border-zinc-200 pointer-events-auto cursor-pointer active:scale-95 transition-all shadow-sm"
                   >
                     <svg className="w-4 h-4 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -218,25 +183,40 @@ export default function Herobar() {
                 </div>
               </div>
 
+              {/* Live tracker and text details below image */}
+              <div className="flex flex-col space-y-2.5 p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-450 uppercase">
+                    {slides[activeSlide].tagline}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[9.5px] font-mono text-zinc-450 font-extrabold uppercase shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                    Live Dispatch
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold tracking-tight text-zinc-950">
+                    {slides[activeSlide].title}
+                  </h4>
+                  <p className="text-xs text-zinc-500 leading-relaxed">
+                    {slides[activeSlide].copy}
+                  </p>
+                </div>
+              </div>
+
               {/* Dot Indicators */}
-              <div className="flex justify-between items-center px-2">
-                <div className="flex space-x-2">
+              <div className="flex justify-between items-center px-2 pt-1 border-t border-zinc-100">
+                <div className="flex space-x-1.5">
                   {slides.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => setActiveSlide(idx)}
-                      className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                        activeSlide === idx ? "w-6 bg-amber-500" : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
+                      className={`h-1.5 rounded-full transition-all duration-350 cursor-pointer ${
+                        activeSlide === idx ? "w-6 bg-black" : "w-1.5 bg-zinc-200 hover:bg-zinc-300"
                       }`}
                     />
                   ))}
                 </div>
-                
-                {/* Monospace live tracker */}
-                <span className="flex items-center gap-1.5 text-[9.5px] font-mono text-zinc-500 font-extrabold uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping" />
-                  Live curbside arrival match
-                </span>
               </div>
 
             </div>

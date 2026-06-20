@@ -7,12 +7,17 @@ import RideBookingCard from "@/components/RideBookingCard";
 import { Ride, getRouteDistance, calculateFare } from "@/lib/data";
 import { fetchUserRides } from "@/actions/ride";
 import { getNearbyDrivers } from "@/actions/driver";
-import { fetchSavedLocations, createSavedLocation } from "@/actions/savedLocation";
+import { fetchSavedLocations, seedSavedLocationsAction } from "@/actions/savedLocation";
 import { getOnboardingState } from "@/actions/onboarding";
 import { Home, Briefcase, Plane, Activity, MapPin, Clock, Navigation2 } from "lucide-react";
 import Link from "next/link";
-import MapboxMap from "@/components/MapboxMap";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
+
+const MapboxMap = dynamic(() => import("@/components/MapboxMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-zinc-150 animate-pulse animate-duration-1000" />,
+});
 
 const greetings = [
   "👋 Ready to roll?",
@@ -123,12 +128,10 @@ export default function RiderDashboard() {
           { label: "Office", address: "Cyber Hub, DLF Cyber City, Gurugram", lat: 28.4950, lon: 77.0878 },
           { label: "College", address: "IIT Delhi, Hauz Khas, New Delhi", lat: 28.5450, lon: 77.1926 },
         ];
-        const seeded = [];
-        for (const loc of initialLocs) {
-          const res = await createSavedLocation(loc.label, loc.address, loc.lat, loc.lon);
-          if (res.success && res.location) seeded.push(res.location);
+        const res = await seedSavedLocationsAction(initialLocs);
+        if (res.success && res.locations) {
+          setDbSavedLocations(res.locations);
         }
-        setDbSavedLocations(seeded);
       }
     } catch (err) {
       console.error("Failed to load saved locations:", err);
@@ -198,17 +201,7 @@ export default function RiderDashboard() {
     loadDashboardData();
   }, []);
 
-  // Don't flash layout while checking auth state
-  if (loading) {
-    return (
-      <main className="relative h-[100dvh] w-full bg-zinc-950 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-          <p className="text-white/50 text-xs font-bold font-mono uppercase tracking-wider">Loading...</p>
-        </div>
-      </main>
-    );
-  }
+
 
   // Mobile: fullscreen map + bottom sheet. Desktop: split-view.
   return (
@@ -257,12 +250,14 @@ export default function RiderDashboard() {
           </div>
 
           <div className="px-5 pt-2 pb-[env(safe-area-inset-bottom,20px)] space-y-4 max-h-[80vh] sm:max-h-[68vh] overflow-y-auto">
-            <div>
-              <p className="text-[10px] font-mono font-bold tracking-[0.2em] text-zinc-400 uppercase">Your next ride</p>
-              <h1 className="text-xl font-black tracking-tight text-zinc-950 mt-1">{greeting}</h1>
-            </div>
+            {destinationCoords === null && (
+              <div>
+                <p className="text-[10px] font-mono font-bold tracking-[0.2em] text-zinc-400 uppercase">Your next ride</p>
+                <h1 className="text-xl font-black tracking-tight text-zinc-950 mt-1">{greeting}</h1>
+              </div>
+            )}
 
-            {dbSavedLocations.length > 0 && (
+            {destinationCoords === null && dbSavedLocations.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5">
                 {dbSavedLocations.map((addr) => {
                   const icons: any = { Home, Office: Briefcase, College: Plane, Gym: Activity };

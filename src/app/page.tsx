@@ -28,23 +28,33 @@ export default async function Home() {
         {/* Phase 8: Promo Discovery Strip */}
         <PromoBanners promos={activePromos} />
 
-        {/* 2. Mobility Suite (2 Featured + 4 Supporting Grid Hierarchy) */}
-        <Services />
+        {/* 2. Mobility Suite - Hidden on mobile for simple presentation */}
+        <div className="hidden lg:block">
+          <Services />
+        </div>
 
         {/* 3. Operational Model (Simple 3-step request-matching-tracking guide) */}
         <HowRydrWorks />
 
-        {/* 4. Smart Bypass Radar (Bypass congestion simulations) */}
-        <SmartFeatures />
+        {/* 4. Smart Bypass Radar - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <SmartFeatures />
+        </div>
 
-        {/* 5. Supply Dashboard Portal (Uber Driver + Stripe Console) */}
-        <DriverSection />
+        {/* 5. Supply Dashboard Portal - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <DriverSection />
+        </div>
 
-        {/* 7. Audited Reviews (Stars, executive positions from Linear/Apex) */}
-        <Testimonials />
+        {/* 7. Audited Reviews - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <Testimonials />
+        </div>
 
-        {/* 8. Handheld Mockup (Consolidated digital wallet eco telemetries) */}
-        <AppExperience />
+        {/* 8. Handheld Mockup - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <AppExperience />
+        </div>
 
         {/* 9. Premium Spacious Footer */}
         <Footer />
